@@ -1,3 +1,4 @@
+import axios from "axios"
 export const loadTab = async (tab: chrome.tabs.Tab) => {
   return new Promise((resolve) => {
     const listener = (tabId: number, changeInfo: any) => {
@@ -11,11 +12,6 @@ export const loadTab = async (tab: chrome.tabs.Tab) => {
 }
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-export const getEbNo = () => {
-  const ebNo = document.querySelector('#ebNo')
-  return (ebNo as HTMLInputElement).value
-}
 
 export const showToast = (message: string, type = "success") => {
   const toast: HTMLElement | null = document.getElementById('notification')
@@ -55,4 +51,21 @@ export const showToast = (message: string, type = "success") => {
     toast.classList.remove("translate-x-0", "opacity-100", "scale-100")
     toast.classList.add("translate-x-full", "opacity-0", "scale-95")
   }, 3000)
+}
+
+export const decodeCapcha = async (base64img: string) => {
+  try {
+    const formData = new FormData();
+    formData.append('user', 'nfwyst');
+    formData.append('pass', 'daisikia');
+    formData.append('softid', '898124');
+    formData.append('codetype', '4004');
+    formData.append('file_base64', base64img);
+    const response = await axios.post('https://upload.chaojiying.net/Upload/Processing.php', formData);
+    console.log("response", response)
+    return response.data.pic_str;
+  } catch (error) {
+    console.error('Error in getCaptchacode:', error);
+    return null;
+  }
 }
