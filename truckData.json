@@ -1,0 +1,74 @@
+[
+  {
+    "address": "安吉上港国际港务有限公司",
+    "code": "ANJI",
+    "name": "安吉上港国际港务有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "上海",
+    "code": "SHGLJ",
+    "name": "港联捷（上海）物流科技有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "江苏省盐城市大丰港经济区中央大道1号一期办公楼（224100)",
+    "code": "JSHF",
+    "name": "江苏沪丰集装箱物流有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "浙江省平湖市独山港镇引港路1号",
+    "code": "DUSHA",
+    "name": "上港集团平湖独山港码头有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "逸仙路4088号123室",
+    "code": "CHUZE",
+    "name": "上海初曾物流有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "上海市宝山区长江路366弄华浜新村68号201室",
+    "code": "CHUAN",
+    "name": "上海串源国际货运代理有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "上海市浦东新区外高桥保税区奥纳路18号210室",
+    "code": "FXLY",
+    "name": "上海繁星联运有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "宝山区逸仙路3901号A5栋210室（200940）",
+    "code": "GANGL",
+    "name": "上海港利国际物流有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  },
+  {
+    "address": "上海市浦东新区杨高北一路90号509室",
+    "code": "GAOYU",
+    "name": "上海高运国际物流有限公司",
+    "type": 7,
+    "create_time": "2026-04-21",
+    "update_time": "2026-04-21"
+  }
+]

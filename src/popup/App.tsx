@@ -1,26 +1,107 @@
 import "./App.css"
 import ButtonComponent from "@/components/ButtonComponent"
-import InputComponent from "@/components/InputComponent"
+import TableComponent from "@/components/TableComponent"
 import { loadTab, delay, decodeCapcha, showToast } from "./scripts"
 import axios from "axios"
 import { Buffer } from "buffer"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { fetchOrderData, fetchTruckData } from "@/utils/services"
 
 export default function App() {
-  const [blNo, setBlNo] = useState("")
-  const [truck, setTruck] = useState("")
+  const [orders, setOrders] = useState<{ data: any[], total: number, pageCurrent: number }>({ data: [], total: 0, pageCurrent: 1 })
+  const [trucks, setTrucks] = useState([])
+  const [selectedOrders, setSelectedOrders] = useState<any[]>([])
+  const columns = [
+    {
+      key: "id",
+      title: "",
+      render: (row: any) => {
+        return (
+          <div className="text-center py-1 px-2">
+            <input
+              disabled={row.truck}
+              type="checkbox"
+              onChange={() => {
+                setSelectedOrders(selectedOrders.map((o: any) => ({ ...o, selected: o.blNo === row.blNo ? !o.selected : o.selected })))
+              }}
+            />
+          </div>
+        );
+      },
+    },
+    {
+      key: "blNo",
+      title: "B/L No.",
+      render: (row: any) => <span className="py-1 px-2">{row.blNo}</span>,
+    },
+    {
+      key: "truck",
+      title: "Truck",
+      render: (row: any) => {
+        return (
+          <div className="text-center py-1 px-2">
+            <select
+              className="cursor-pointer border-1 border-gray-300 rounded-md p-1"
+              disabled={row.truck}
+              value={selectedOrders?.find((o: any) => o.blNo === row.blNo)?.truck}
+              onChange={(e) => {
+                setSelectedOrders(selectedOrders.map((o: any) => ({ ...o, truck: o.blNo === row.blNo ? e.target.value : o.truck })))
+              }}
+            >
+              {trucks.map((t: any) => (
+                <option key={t.id} value={t.name}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      },
+    },
+  ]
+
+  // Fetch order and truck data
+  useEffect(() => {
+    fetchOrderData({ page: 1, pageSize: 10 }).then((data) => {
+      const orders = data.data.map((o: any) => ({
+        blNo: o.order.blNo,
+        id: o.id,
+        truck: o?.order?.trailerCom?.name || "",
+      }))
+      setOrders({
+        data: orders,
+        total: data.total,
+        pageCurrent: 1,
+      });
+      setSelectedOrders(orders.map((o: any) => ({ ...o, selected: false })))
+    }).catch((error) => {
+      console.error("Error fetching order data", error)
+    })
+    fetchTruckData().then((data) => {
+      setTrucks(data.data)
+    }).catch((error) => {
+      console.error("Error fetching truck data", error)
+    })
+  }, [])
   // Handle scrape button click
   const handleStart = async () => {
-    if (!blNo || !truck) {
-      showToast("Please enter blNo and truck!", "warning")
+    // Handle data
+    const data = selectedOrders.filter((o: any) => o.selected && o.truck).map((o: any) => ({
+      blNo: o.blNo,
+      truck: o?.truck?.trim()?.includes("ONEY") ? o?.truck?.trim()?.replace("ONEY", "") : o?.truck?.trim(),
+    }))
+    if (data.length === 0) {
+      showToast("Please select at least one order / truck not empty!", "warning")
       return
     }
+
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     })
     const url1 = "https://www.eptrade.cn/epb/login/scno_direct_bk.html"
     const url = "https://www.eptrade.cn/epb/index.jsp"
+    console.log("selectedOrders", data);
 
     // Load URL
     await chrome.tabs.update(tab.id, { url })
@@ -82,121 +163,138 @@ export default function App() {
       })
     }
 
-    await delay(1000)
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id as number },
-      func: async (blNo: string, truck: string) => {
-        const waitFor = <T extends Element>(
-          selector: string,
-          root: Document | Element = document,
-          timeout: number = 10000
-        ): Promise<T> => {
-          return new Promise((resolve, reject) => {
-            const start = Date.now();
-            const timer = setInterval(() => {
-              const el = root.querySelector(selector) as T;
-              if (el) {
-                clearInterval(timer);
-                resolve(el);
-              } else if (Date.now() - start > timeout) {
-                clearInterval(timer);
-                reject(new Error(`Timeout: ${selector}`));
-              }
-            }, 200);
-          });
+    for (const item of data) {
+      await delay(1000)
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id as number },
+        func: async (blNo: string, truck: string) => {
+          const waitFor = <T extends Element>(
+            selector: string,
+            root: Document | Element = document,
+            timeout: number = 10000
+          ): Promise<T> => {
+            return new Promise((resolve, reject) => {
+              const start = Date.now();
+              const timer = setInterval(() => {
+                const el = root.querySelector(selector) as T;
+                if (el) {
+                  clearInterval(timer);
+                  resolve(el);
+                } else if (Date.now() - start > timeout) {
+                  clearInterval(timer);
+                  reject(new Error(`Timeout: ${selector}`));
+                }
+              }, 200);
+            });
+          }
+          const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+  
+          try {
+            // 1. click tab
+            console.clear()
+            console.log("Start click tab...")
+            const tabInfo = await waitFor<HTMLAnchorElement>(
+              'div > div.panel-body.accordion-body > ul > li:nth-child(2) > div > a[target="mainFrame"]'
+            )
+            tabInfo.click()
+            await delay(1500)
+  
+            // 2. Get the iframe
+            const iframe = await waitFor<HTMLIFrameElement>("#tabs > div.tabs-panels.tabs-panels-noborder > div:nth-child(2) > div > iframe")
+            const doc = iframe.contentDocument as Document | null
+  
+            if (!doc) throw new Error("iframe not loaded");
+  
+            // 3. input BL
+            const blInput = await waitFor<HTMLInputElement>('input[name="param.like.ebw2Booking.bookingNo"]', doc)
+  
+            blInput.value = blNo.includes("ONEY")
+              ? blNo.replace("ONEY", "")
+              : blNo
+            blInput.dispatchEvent(new Event("input", { bubbles: true }))
+            blInput.dispatchEvent(new Event("change", { bubbles: true }))
+  
+            // 4. search
+            const searchBtn = await waitFor<HTMLInputElement>('input[onclick="query(\'cdusform\',\'book_list\')"]', doc)
+            searchBtn.click()
+            await delay(4000)
+  
+            // 5. checkbox
+            const checkbox = await waitFor<HTMLInputElement>(
+              "body > div.text > div > div.datagrid-wrap.panel-body > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr > td:nth-child(1) input",
+              doc
+            )
+            checkbox.click()
+  
+            // 6. edit
+            const editBtn = await waitFor<HTMLElement>(".datagrid-toolbar a:nth-child(9)", doc)
+            editBtn.click()
+  
+            // 7. choose CA
+            const yn = await waitFor<HTMLInputElement>("#chooseCa", doc)
+            yn.click()
+  
+            // 8. input truck
+            const truckInput = await waitFor<HTMLInputElement>("#zdca > div > div > div > div:nth-child(1) > span > input.combo-text.validatebox-text", doc)
+            truckInput.value = truck.trim()
+            truckInput.dispatchEvent(new Event("input", { bubbles: true }))
+            truckInput.dispatchEvent(new Event("change", { bubbles: true }))
+            await delay(1000)
+  
+            // 9. search truck
+            const searchTruck = await waitFor<HTMLInputElement>('input[onclick="queryCarrier()"]', doc)
+            searchTruck.click()
+            await delay(3000)
+  
+            return true
+          } catch (err) {
+            console.error("ERROR:", err);
+            return false;
+          }
+        },
+        args: [item.blNo, item.truck],
+      })
+  
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id as number },
+        func: async () => {
+          try {
+            const iframe = document.querySelectorAll(
+              "body iframe"
+            )[1] as HTMLIFrameElement
+            const chooseTruckBtn = iframe.contentDocument?.querySelector(
+              "#zdca > div > div > div > div.panel.datagrid > div > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr:nth-child(2) > td:nth-child(1) > div > input[type=checkbox]"
+            ) as HTMLButtonElement
+            if (chooseTruckBtn) chooseTruckBtn.click()
+  
+            const nominateBtn = iframe.contentDocument?.querySelector(
+              "div.datagrid-toolbar > a > span > span.icon-save"
+            ) as HTMLInputElement
+            if (nominateBtn) nominateBtn.click()
+  
+            const saveBtn = iframe.contentDocument?.querySelector("#bkgCarrierSave") as HTMLInputElement
+            console.log("saveBtn", saveBtn)
+            // if (saveBtn) saveBtn.click()
+          } catch (error) {
+            console.error("Error click on the tab info", error)
+          }
         }
-        const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+      })
+    }
+  }
 
-        try {
-          // 1. click tab
-          console.clear()
-          console.log("Start click tab...")
-          const tabInfo = await waitFor<HTMLAnchorElement>(
-            'div > div.panel-body.accordion-body > ul > li:nth-child(2) > div > a[target="mainFrame"]'
-          )
-          tabInfo.click()
-          await delay(1500)
-
-          // 2. Get the iframe
-          const iframe = await waitFor<HTMLIFrameElement>("#tabs > div.tabs-panels.tabs-panels-noborder > div:nth-child(2) > div > iframe")
-          const doc = iframe.contentDocument as Document | null
-
-          if (!doc) throw new Error("iframe not loaded");
-
-          // 3. input BL
-          const blInput = await waitFor<HTMLInputElement>('input[name="param.like.ebw2Booking.bookingNo"]', doc)
-
-          blInput.value = blNo.includes("ONEY")
-            ? blNo.replace("ONEY", "")
-            : blNo
-          blInput.dispatchEvent(new Event("input", { bubbles: true }))
-          blInput.dispatchEvent(new Event("change", { bubbles: true }))
-
-          // 4. search
-          const searchBtn = await waitFor<HTMLInputElement>('input[onclick="query(\'cdusform\',\'book_list\')"]', doc)
-          searchBtn.click()
-          await delay(4000)
-
-          // 5. checkbox
-          const checkbox = await waitFor<HTMLInputElement>(
-            "body > div.text > div > div.datagrid-wrap.panel-body > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr > td:nth-child(1) input",
-            doc
-          )
-          checkbox.click()
-
-          // 6. edit
-          const editBtn = await waitFor<HTMLElement>(".datagrid-toolbar a:nth-child(9)", doc)
-          editBtn.click()
-
-          // 7. choose CA
-          const yn = await waitFor<HTMLInputElement>("#chooseCa", doc)
-          yn.click()
-
-          // 8. input truck
-          const truckInput = await waitFor<HTMLInputElement>("#zdca > div > div > div > div:nth-child(1) > span > input.combo-text.validatebox-text", doc)
-          truckInput.value = truck.trim()
-          truckInput.dispatchEvent(new Event("input", { bubbles: true }))
-          truckInput.dispatchEvent(new Event("change", { bubbles: true }))
-          await delay(1000)
-
-          // 9. search truck
-          const searchTruck = await waitFor<HTMLInputElement>('input[onclick="queryCarrier()"]', doc)
-          searchTruck.click()
-          await delay(3000)
-
-          return true
-        } catch (err) {
-          console.error("ERROR:", err);
-          return false;
-        }
-      },
-      args: [blNo, truck],
-    })
-
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id as number },
-      func: async () => {
-        try {
-          const iframe = document.querySelectorAll(
-            "body iframe"
-          )[1] as HTMLIFrameElement
-          const chooseTruckBtn = iframe.contentDocument?.querySelector(
-            "#zdca > div > div > div > div.panel.datagrid > div > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr:nth-child(2) > td:nth-child(1) > div > input[type=checkbox]"
-          ) as HTMLButtonElement
-          if (chooseTruckBtn) chooseTruckBtn.click()
-
-          const nominateBtn = iframe.contentDocument?.querySelector(
-            "div.datagrid-toolbar > a > span > span.icon-save"
-          ) as HTMLInputElement
-          if (nominateBtn) nominateBtn.click()
-
-          const saveBtn = iframe.contentDocument?.querySelector("#bkgCarrierSave") as HTMLInputElement
-          console.log("saveBtn", saveBtn)
-          // if (saveBtn) saveBtn.click()
-        } catch (error) {
-          console.error("Error click on the tab info", error)
-        }
-      }
+  // Handle onchange page of orders
+  const handleChangePage = (page: number) => {
+    fetchOrderData({ page: page, pageSize: 10 }).then((data) => {
+      const orders = data.data.map((o: any) => ({
+        blNo: o.order.blNo,
+        id: o.id,
+        truck: o?.order?.trailerCom?.name || "",
+      }))
+      setOrders({ data: orders, total: data.total, pageCurrent: page })
+      setSelectedOrders(orders.map((o: any) => ({ ...o, selected: false })))
+    }).catch((error) => {
+      console.error("Error fetching order data", error)
     })
   }
   return (
@@ -205,28 +303,27 @@ export default function App() {
         id="notification"
         className="absolute top-[1rem] right-[2rem] p-1 rounded-md shadow-lg"
       ></div>
-      <div className="flex gap-2 items-center justify-center">
-        <InputComponent
-          label="blNo:"
-          id="blNo"
-          value={blNo}
-          onChange={(e) => setBlNo(e.target.value)}
-          type="text"
-        />
-        <InputComponent
-          label="Truck:"
-          id="truck"
-          value={truck}
-          onChange={(e) => setTruck(e.target.value)}
-          type="text"
-        />
+      <div className="text-center text-2xl font-bold mb-2 text-[#99BBE8]">
+        YITONG EPB
+      </div>
+      <div className="">
+        {!!orders?.data?.length && (
+          <TableComponent
+            columns={columns}
+            data={orders?.data}
+            page={orders?.pageCurrent}
+            pageSize={10}
+            total={orders?.total}
+            onPageChange={(page) => handleChangePage(page)}
+          />
+        )}
         <ButtonComponent
           onClick={handleStart}
           text="Start"
           id="start"
-          className=""
+          classNameProps="mt-2 bg-[#277fbc] px-4 py-2"
         />
       </div>
     </div>
-  )
+  );
 }

@@ -1,9 +1,10 @@
-const ButtonComponent = ({ onClick, text, id, ...className }: { onClick: () => void, text: string, id: string, className: string }) => {
+const ButtonComponent = ({ onClick, text, id, classNameProps, disabled }: { onClick: () => void, text: string, id?: string, classNameProps?: string, disabled?: boolean }) => {
   return (
     <button
       id={id}
-      className={`bg-[#277fbc] text-white p-2 rounded-md ${className}`}
+      className={`bg-[#277fbc] text-white p-2 rounded-md ${classNameProps}`}
       onClick={onClick}
+      disabled={disabled}
     >
       {text}
     </button>
