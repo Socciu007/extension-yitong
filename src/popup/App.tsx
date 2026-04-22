@@ -26,7 +26,7 @@ export default function App() {
               }}
             />
           </div>
-        );
+        )
       },
     },
     {
@@ -55,7 +55,7 @@ export default function App() {
               ))}
             </select>
           </div>
-        );
+        )
       },
     },
   ]
@@ -72,7 +72,7 @@ export default function App() {
         data: orders,
         total: data.total,
         pageCurrent: 1,
-      });
+      })
       setSelectedOrders(orders.map((o: any) => ({ ...o, selected: false })))
     }).catch((error) => {
       console.error("Error fetching order data", error)
@@ -86,10 +86,14 @@ export default function App() {
   // Handle scrape button click
   const handleStart = async () => {
     // Handle data
-    const data = selectedOrders.filter((o: any) => o.selected && o.truck).map((o: any) => ({
-      blNo: o.blNo,
-      truck: o?.truck?.trim()?.includes("ONEY") ? o?.truck?.trim()?.replace("ONEY", "") : o?.truck?.trim(),
-    }))
+    const data = selectedOrders
+      .filter((o: any) => o.selected && o.truck)
+      .map((o: any) => ({
+        blNo: o.blNo?.includes("ONEY")
+          ? o.blNo?.replace("ONEY", "")
+          : o.blNo?.trim(),
+        truck: o.truck
+      }))
     if (data.length === 0) {
       showToast("Please select at least one order / truck not empty!", "warning")
       return
@@ -101,7 +105,7 @@ export default function App() {
     })
     const url1 = "https://www.eptrade.cn/epb/login/scno_direct_bk.html"
     const url = "https://www.eptrade.cn/epb/index.jsp"
-    console.log("selectedOrders", data);
+    console.log("selectedOrders", data)
 
     // Load URL
     await chrome.tabs.update(tab.id, { url })
@@ -165,6 +169,7 @@ export default function App() {
 
     for (const item of data) {
       await delay(1000)
+      // Choose order
       await chrome.scripting.executeScript({
         target: { tabId: tab.id as number },
         func: async (blNo: string, truck: string) => {
@@ -174,18 +179,18 @@ export default function App() {
             timeout: number = 10000
           ): Promise<T> => {
             return new Promise((resolve, reject) => {
-              const start = Date.now();
+              const start = Date.now()
               const timer = setInterval(() => {
-                const el = root.querySelector(selector) as T;
+                const el = root.querySelector(selector) as T
                 if (el) {
-                  clearInterval(timer);
-                  resolve(el);
+                  clearInterval(timer)
+                  resolve(el)
                 } else if (Date.now() - start > timeout) {
-                  clearInterval(timer);
-                  reject(new Error(`Timeout: ${selector}`));
+                  clearInterval(timer)
+                  reject(new Error(`Timeout: ${selector}`))
                 }
-              }, 200);
-            });
+              }, 200)
+            })
           }
           const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
   
@@ -197,27 +202,25 @@ export default function App() {
               'div > div.panel-body.accordion-body > ul > li:nth-child(2) > div > a[target="mainFrame"]'
             )
             tabInfo.click()
-            await delay(1500)
+            await delay(5000)
   
             // 2. Get the iframe
             const iframe = await waitFor<HTMLIFrameElement>("#tabs > div.tabs-panels.tabs-panels-noborder > div:nth-child(2) > div > iframe")
             const doc = iframe.contentDocument as Document | null
   
-            if (!doc) throw new Error("iframe not loaded");
+            if (!doc) throw new Error("iframe not loaded")
   
             // 3. input BL
             const blInput = await waitFor<HTMLInputElement>('input[name="param.like.ebw2Booking.bookingNo"]', doc)
   
-            blInput.value = blNo.includes("ONEY")
-              ? blNo.replace("ONEY", "")
-              : blNo
+            blInput.value = blNo
             blInput.dispatchEvent(new Event("input", { bubbles: true }))
             blInput.dispatchEvent(new Event("change", { bubbles: true }))
   
             // 4. search
             const searchBtn = await waitFor<HTMLInputElement>('input[onclick="query(\'cdusform\',\'book_list\')"]', doc)
             searchBtn.click()
-            await delay(4000)
+            await delay(3000)
   
             // 5. checkbox
             const checkbox = await waitFor<HTMLInputElement>(
@@ -229,6 +232,12 @@ export default function App() {
             // 6. edit
             const editBtn = await waitFor<HTMLElement>(".datagrid-toolbar a:nth-child(9)", doc)
             editBtn.click()
+
+            // 7. if orrder not edit
+            const notEdit = await doc.querySelector(
+              "div.messager-body.panel-body.panel-body-noborder.window-body > div.messager-button > a > span > span",
+            ) as HTMLAnchorElement
+            if (notEdit) notEdit.click()
   
             // 7. choose CA
             const yn = await waitFor<HTMLInputElement>("#chooseCa", doc)
@@ -243,43 +252,98 @@ export default function App() {
   
             // 9. search truck
             const searchTruck = await waitFor<HTMLInputElement>('input[onclick="queryCarrier()"]', doc)
+            console.log("searchTruck", searchTruck)
             searchTruck.click()
             await delay(3000)
   
             return true
           } catch (err) {
-            console.error("ERROR:", err);
-            return false;
+            console.error("ERROR:", err)
+            return false
           }
         },
         args: [item.blNo, item.truck],
       })
+      await delay(1000)
   
+      // Choose truck for order
       await chrome.scripting.executeScript({
         target: { tabId: tab.id as number },
         func: async () => {
+          const waitFor = <T extends Element>(
+            selector: string,
+            root: Document | Element = document,
+            timeout: number = 10000
+          ): Promise<T> => {
+            return new Promise((resolve, reject) => {
+              const start = Date.now()
+              const timer = setInterval(() => {
+                const el = root.querySelector(selector) as T
+                if (el) {
+                  clearInterval(timer)
+                  resolve(el)
+                } else if (Date.now() - start > timeout) {
+                  clearInterval(timer)
+                  reject(new Error(`Timeout: ${selector}`))
+                }
+              }, 200)
+            })
+          }
           try {
-            const iframe = document.querySelectorAll(
-              "body iframe"
-            )[1] as HTMLIFrameElement
-            const chooseTruckBtn = iframe.contentDocument?.querySelector(
-              "#zdca > div > div > div > div.panel.datagrid > div > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr:nth-child(2) > td:nth-child(1) > div > input[type=checkbox]"
-            ) as HTMLButtonElement
+            const iframe = await waitFor<HTMLIFrameElement>('body iframe[name="mainFrame"]')
+            const doc = iframe.contentDocument as Document | null
+            if (!doc) throw new Error("iframe not loaded")
+            const chooseTruckBtn = await waitFor<HTMLInputElement>(
+              "#zdca > div > div > div > div.panel.datagrid > div > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr:nth-child(2) > td:nth-child(1) > div > input[type=checkbox]",
+              doc
+            )
+            console.log("chooseTruckBtn", chooseTruckBtn)
             if (chooseTruckBtn) chooseTruckBtn.click()
-  
-            const nominateBtn = iframe.contentDocument?.querySelector(
-              "div.datagrid-toolbar > a > span > span.icon-save"
-            ) as HTMLInputElement
+
+            const nominateBtn = await waitFor<HTMLButtonElement>(
+              "div.datagrid-toolbar > a > span > span.icon-save",
+              doc
+            )
+            console.log("nominateBtn", nominateBtn)
             if (nominateBtn) nominateBtn.click()
-  
-            const saveBtn = iframe.contentDocument?.querySelector("#bkgCarrierSave") as HTMLInputElement
+
+            // 7. if orrder not edit
+            const notEdit = doc.querySelector(
+              "div.messager-body.panel-body.panel-body-noborder.window-body > div.messager-button > a > span > span",
+            ) as HTMLAnchorElement
+            console.log("notEdit", notEdit)
+            if (notEdit) notEdit.click()
+
+            const saveBtn = doc.querySelector("#bkgCarrierSave") as HTMLInputElement
+            const closeBtn = doc.querySelector("#tabClose") as HTMLInputElement
+            if (closeBtn) closeBtn.click()
             console.log("saveBtn", saveBtn)
+            console.log("closeBtn", closeBtn)
             // if (saveBtn) saveBtn.click()
+            return true
           } catch (error) {
             console.error("Error click on the tab info", error)
+            return false
           }
         }
       })
+      await delay(1000)
+
+      // Reset the form
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id as number },
+        func: async () => {
+          const iframe = document.querySelectorAll(
+            "#tabs > div.tabs-panels.tabs-panels-noborder > div:nth-child(2) > div > iframe"
+          )[1] as HTMLIFrameElement
+          const doc = iframe.contentDocument as Document | null
+          if (!doc) throw new Error("iframe not loaded")
+
+          const resetBtn = doc.querySelector('button[type="reset"]')
+          if (resetBtn) (resetBtn as HTMLButtonElement).click()
+        }
+      })
+      console.log("Finish one order / truck", item.blNo)
     }
   }
 
@@ -299,10 +363,6 @@ export default function App() {
   }
   return (
     <div className="mb-2">
-      <div
-        id="notification"
-        className="absolute top-[1rem] right-[2rem] p-1 rounded-md shadow-lg"
-      ></div>
       <div className="text-center text-2xl font-bold mb-2 text-[#99BBE8]">
         YITONG EPB
       </div>
@@ -325,5 +385,5 @@ export default function App() {
         />
       </div>
     </div>
-  );
+  )
 }
