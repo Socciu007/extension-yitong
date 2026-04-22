@@ -24,4 +24,19 @@ const fetchOrderData = async ({page, pageSize}: {page: number, pageSize: number}
   }
 }
 
-export { fetchTruckData, fetchOrderData }
+// Update order data
+const updateOrderData = async ({blNo, trailerCompany}: {blNo: string, trailerCompany: number}) => {
+  const url = 'http://localhost:3001/vn/yitong/truckCompany'
+  try {
+    const data = {
+      blNo,
+      trailerCompany,
+    }
+    const res = await axios.patch(url, data)
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
+export { fetchTruckData, fetchOrderData, updateOrderData }
