@@ -21,6 +21,7 @@ export default defineManifest({
     'scripting',
     'storage',
     'tabs',
+    'cookies',
   ],
   content_scripts: [{
     js: ['src/content/features/index.ts'],
