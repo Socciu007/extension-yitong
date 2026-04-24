@@ -55,7 +55,6 @@ export const showToast = (message: string, type = "success") => {
 
 export const decodeCapcha = async (base64img: string) => {
   try {
-    console.log("base64img", base64img)
     const formData = new FormData()
     formData.append('user', 'nfwyst')
     formData.append('pass', 'daisikia')

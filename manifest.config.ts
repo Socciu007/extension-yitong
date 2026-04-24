@@ -14,7 +14,6 @@ export default defineManifest({
     },
     default_popup: 'src/popup/index.html',
   },
-  host_permissions: ['https://*/*'],
   permissions: [
     'contentSettings',
     'activeTab',
@@ -23,6 +22,7 @@ export default defineManifest({
     'tabs',
     'cookies',
   ],
+  host_permissions: ['*://*.eptrade.cn/*'],
   content_scripts: [{
     js: ['src/content/features/index.ts'],
     matches: ['https://*/*'],

@@ -5,7 +5,7 @@ import { loadTab, delay, decodeCapcha, showToast } from "./scripts"
 import axios from "axios"
 import { Buffer } from "buffer"
 import { useState, useEffect } from "react"
-import { fetchOrderData, fetchTruckData } from "@/utils/services"
+import { fetchOrderData, fetchTruckData, getYitongOrderData, saveYitongOrderData, getYitongOrderDataDb } from "@/utils/services"
 
 export default function App() {
   const [orders, setOrders] = useState<{ data: any[], total: number, pageCurrent: number }>({ data: [], total: 0, pageCurrent: 1 })
@@ -60,28 +60,28 @@ export default function App() {
   ]
 
   // Fetch order and truck data
-  useEffect(() => {
-    fetchOrderData({ page: 1, pageSize: 10 }).then((data) => {
-      const orders = data.data.map((o: any) => ({
-        blNo: o.order.blNo,
-        id: o.id,
-        truck: o?.order?.trailerCom?.name || "",
-      }))
-      setOrders({
-        data: orders,
-        total: data.total,
-        pageCurrent: 1,
-      })
-      setSelectedOrders(orders.map((o: any) => ({ ...o, selected: false })))
-    }).catch((error) => {
-      console.error("Error fetching order data", error)
-    })
-    fetchTruckData().then((data) => {
-      setTrucks([{ id: "0", name: "-" }, ...data.data])
-    }).catch((error) => {
-      console.error("Error fetching truck data", error)
-    })
-  }, [])
+  // useEffect(() => {
+  //   fetchOrderData({ page: 1, pageSize: 10 }).then((data) => {
+  //     const orders = data.data.map((o: any) => ({
+  //       blNo: o.order.blNo,
+  //       id: o.id,
+  //       truck: o?.order?.trailerCom?.name || "",
+  //     }))
+  //     setOrders({
+  //       data: orders,
+  //       total: data.total,
+  //       pageCurrent: 1,
+  //     })
+  //     setSelectedOrders(orders.map((o: any) => ({ ...o, selected: false })))
+  //   }).catch((error) => {
+  //     console.error("Error fetching order data", error)
+  //   })
+  //   fetchTruckData().then((data) => {
+  //     setTrucks([{ id: "0", name: "-" }, ...data.data])
+  //   }).catch((error) => {
+  //     console.error("Error fetching truck data", error)
+  //   })
+  // }, [])
   // Handle scrape button click
   const handleStart = async () => {
     // Handle data
@@ -181,208 +181,28 @@ export default function App() {
       }
     }
 
+    // Wait for tab to load
+    await loadTab(tab)
+
     // Get header cookie from website
-    const headerCookie = await chrome.cookies.get({
-      url: "https://www.eptrade.cn",
-      name: "JSESSIONID",
-    });
-    console.log("headerCookie", headerCookie)
+    const headerCookie = await chrome.cookies.getAll({
+      url: "https://www.eptrade.cn/epb",
+    })
 
-    // for (let i = 0; i < data.length; i++) {
-    //   setLoading(i + 1)
-    //   const item = data[i]
-    //   await delay(1000)
-    //   // Choose order
-    //   const result = await chrome.scripting.executeScript({
-    //     target: { tabId: tab.id as number },
-    //     func: async (blNo: string, truck: string) => {
-    //       const waitFor = <T extends Element>(
-    //         selector: string,
-    //         root: Document | Element = document,
-    //         timeout: number = 10000
-    //       ): Promise<T> => {
-    //         return new Promise((resolve, reject) => {
-    //           const start = Date.now()
-    //           const timer = setInterval(() => {
-    //             const el = root.querySelector(selector) as T
-    //             if (el) {
-    //               clearInterval(timer)
-    //               resolve(el)
-    //             } else if (Date.now() - start > timeout) {
-    //               clearInterval(timer)
-    //               reject(new Error(`Timeout: ${selector}`))
-    //             }
-    //           }, 200)
-    //         })
-    //       }
-    //       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-  
-    //       try {
-    //         // 1. click tab
-    //         console.clear()
-    //         console.log("Start click tab...")
-    //         const tabInfo = await waitFor<HTMLAnchorElement>(
-    //           'div > div.panel-body.accordion-body > ul > li:nth-child(2) > div > a[target="mainFrame"]'
-    //         )
-    //         tabInfo.click()
-    //         await delay(2000)
-  
-    //         // 2. Get the iframe
-    //         const iframe = await waitFor<HTMLIFrameElement>("#tabs > div.tabs-panels.tabs-panels-noborder > div:nth-child(2) > div > iframe")
-    //         const doc = iframe.contentDocument as Document | null
-  
-    //         if (!doc) throw new Error("iframe not loaded")
-  
-    //         // 3. input BL
-    //         const blInput = await waitFor<HTMLInputElement>('input[name="param.like.ebw2Booking.bookingNo"]', doc)
-  
-    //         blInput.value = blNo
-    //         blInput.dispatchEvent(new Event("input", { bubbles: true }))
-    //         blInput.dispatchEvent(new Event("change", { bubbles: true }))
-  
-    //         // 4. search
-    //         const searchBtn = await waitFor<HTMLInputElement>('input[onclick="query(\'cdusform\',\'book_list\')"]', doc)
-    //         searchBtn.click()
-    //         await delay(4000)
-  
-    //         // 5. checkbox
-    //         const checkbox = await waitFor<HTMLInputElement>(
-    //           "body > div.text > div > div.datagrid-wrap.panel-body > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr > td:nth-child(1) input",
-    //           doc
-    //         )
-    //         checkbox.click()
-  
-    //         // 6. edit
-    //         const editBtn = await waitFor<HTMLElement>(".datagrid-toolbar a:nth-child(9)", doc)
-    //         editBtn.click()
-    //         await delay(1000)
-
-    //         // 7. if orrder not edit
-    //         const notEdit = await doc.querySelector(
-    //           "div.messager-body.panel-body.panel-body-noborder.window-body > div.messager-button > a > span > span",
-    //         ) as HTMLAnchorElement
-    //         if (notEdit) {
-    //           notEdit.click()
-    //           return false
-    //         }
-  
-    //         // 7. choose CA
-    //         const yn = await waitFor<HTMLInputElement>("#chooseCa", doc)
-    //         yn.click()
-    //         await delay(1000)
-  
-    //         // 8. input truck
-    //         const truckInput = await waitFor<HTMLInputElement>("#zdca > div > div > div > div:nth-child(1) > span > input.combo-text.validatebox-text", doc)
-    //         truckInput.value = truck.trim()
-    //         truckInput.dispatchEvent(new Event("input", { bubbles: true }))
-    //         truckInput.dispatchEvent(new Event("change", { bubbles: true }))
-    //         await delay(1000)
-  
-    //         // 9. search truck
-    //         const searchTruck = await waitFor<HTMLInputElement>('input[onclick="queryCarrier()"]', doc)
-    //         console.log("searchTruck", searchTruck)
-    //         searchTruck.click()
-    //         await delay(3000)
-  
-    //         return true
-    //       } catch (err) {
-    //         console.error("ERROR:", err)
-    //         return false
-    //       }
-    //     },
-    //     args: [item.blNo, item.truck],
-    //   })
-    //   await delay(1000)
-  
-    //   // Choose truck for order
-    //   if (result[0].result) {
-    //     await chrome.scripting.executeScript({
-    //       target: { tabId: tab.id as number },
-    //       func: async () => {
-    //         const waitFor = <T extends Element>(
-    //           selector: string,
-    //           root: Document | Element = document,
-    //           timeout: number = 10000
-    //         ): Promise<T> => {
-    //           return new Promise((resolve, reject) => {
-    //             const start = Date.now()
-    //             const timer = setInterval(() => {
-    //               const el = root.querySelector(selector) as T
-    //               if (el) {
-    //                 clearInterval(timer)
-    //                 resolve(el)
-    //               } else if (Date.now() - start > timeout) {
-    //                 clearInterval(timer)
-    //                 reject(new Error(`Timeout: ${selector}`))
-    //               }
-    //             }, 200)
-    //           })
-    //         }
-    //         const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-    //         try {
-    //           const iframe = await waitFor<HTMLIFrameElement>('body iframe[name="mainFrame"]')
-    //           const doc = iframe.contentDocument as Document | null
-    //           if (!doc) throw new Error("iframe not loaded")
-    //           const chooseTruckBtn = await waitFor<HTMLInputElement>(
-    //             "#zdca > div > div > div > div.panel.datagrid > div > div.datagrid-view > div.datagrid-view2 > div.datagrid-body > table > tbody > tr:nth-child(2) > td:nth-child(1) > div > input[type=checkbox]",
-    //             doc
-    //           )
-    //           console.log("chooseTruckBtn", chooseTruckBtn)
-    //           if (chooseTruckBtn) chooseTruckBtn.click()
-
-    //           const nominateBtn = await waitFor<HTMLButtonElement>(
-    //             "div.datagrid-toolbar > a > span > span.icon-save",
-    //             doc
-    //           )
-    //           console.log("nominateBtn", nominateBtn)
-    //           if (nominateBtn) nominateBtn.click()
-    //           await delay(2000)
-
-    //           // 7. if orrder not edit
-    //           const notEdit = doc.querySelector(
-    //             "div.messager-body.panel-body.panel-body-noborder.window-body > div.messager-button > a > span > span",
-    //           ) as HTMLAnchorElement
-    //           console.log("notEdit", notEdit)
-    //           if (notEdit) notEdit.click()
-
-    //           const saveBtn = doc.querySelector("#bkgCarrierSave") as HTMLInputElement
-    //           const closeBtn = doc.querySelector("#tabClose") as HTMLInputElement
-    //           if (closeBtn) closeBtn.click()
-    //           console.log("saveBtn", saveBtn)
-    //           console.log("closeBtn", closeBtn)
-    //           // if (saveBtn) saveBtn.click()
-    //           return true
-    //         } catch (error) {
-    //           console.error("Error click on the tab info", error)
-    //           return false
-    //         }
-    //       }
-    //     })
-    //     await delay(1000)
-    //     // Reset the form
-    //     await chrome.scripting.executeScript({
-    //       target: { tabId: tab.id as number },
-    //       func: async () => {
-    //         try {
-    //           const iframe = document.querySelector(
-    //             "#tabs > div.tabs-panels.tabs-panels-noborder > div:nth-child(2) > div > iframe"
-    //           ) as HTMLIFrameElement
-    //           const doc = iframe.contentDocument as Document | null
-    //           if (!doc) throw new Error("iframe not loaded")
-
-    //           const resetBtn = doc.querySelector('[type="reset"]')
-    //           console.log("resetBtn", resetBtn)
-    //           if (resetBtn) (resetBtn as HTMLButtonElement).click()
-    //           return true
-    //         } catch (error) {
-    //           console.error("Error reset the form", error)
-    //           return false
-    //         }
-    //       }
-    //     })
-    //   }
-    //   console.log("Finish one order / truck", item.blNo)
+    // Get yitong order data
+    const cookies = headerCookie.map((c: any) => `${c.name}=${c.value}`).join('; ')
+    let rowsData = []
+    const { rows, total } = await getYitongOrderData(cookies, { page: 1, rows: 100 })
+    rowsData.push(...rows)
+    const totalPage = Math.ceil(total / 100)
+    // for (let i = 2; i <= totalPage; i++) {
+    //   const { rows: rowsTemp } = await getYitongOrderData(cookies, { page: i, rows: 20 })
+    //   if (rowsTemp && rowsTemp.length > 0) rowsData.push(...rowsTemp)
     // }
+
+    // Save yitong order data to database
+    const resultSave = await saveYitongOrderData(rows.map((o: any) => ({...o, statusTruck: 0})))
+    console.log("resultSave", resultSave)
 
     showToast("Finish all sea orders", "success")
     setLoading(0)

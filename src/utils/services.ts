@@ -39,4 +39,57 @@ const updateOrderData = async ({blNo, trailerCompany}: {blNo: string, trailerCom
   }
 }
 
-export { fetchTruckData, fetchOrderData, updateOrderData }
+// Get yitong order data from eptrade
+const getYitongOrderData = async (cookie: string, params: any) => {
+  const url = 'https://www.eptrade.cn/epb/cdus.html?method=search1'
+  try {
+    // Add params to form data
+    const { page, rows } = params
+
+    // Add header cookie
+    const headers = {
+      Cookie: cookie,
+    }
+    // Add body data by form data
+    const formData = new FormData()
+    formData.append('param.ebw2Booking.recvCode', 'ONEY')
+    formData.append('className', 'com.easipass.ebw2.dao.model.Ebw2Booking ebw2Booking')
+    formData.append('forward', 'booking/common/cd_book_list')
+    formData.append('param.ebw2Booking.sendCode', '743280357')
+    formData.append('param.ebw2Booking.cdbookStatus', 'Y')
+    formData.append('page', page.toString() || '1')
+    formData.append('rows', rows.toString() || '100')
+    formData.append('sort', 'updateTime')
+    formData.append('order', 'desc')
+
+    // Call api get data
+    const res = await axios.post(url, formData, { headers })
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
+// Save yitong order data to database
+const saveYitongOrderData = async (data: any) => {
+  const url = 'http://localhost:3000/moneyapi/yitong'
+  try {
+    const res = await axios.post(url, data)
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
+// Get data yitong order from database
+const getYitongOrderDataDb = async () => {
+  const url = 'http://localhost:3000/moneyapi/yitong'
+  try {
+    const res = await axios.get(url)
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
+export { fetchTruckData, fetchOrderData, updateOrderData, getYitongOrderData, saveYitongOrderData, getYitongOrderDataDb }
