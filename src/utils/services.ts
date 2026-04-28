@@ -87,9 +87,11 @@ const fillTruckForYitongOrder = async (cookie: string, params: any) => {
   }
 }
 
+// https://vn2.dadaex.cn/api/moneyapi
+// http://localhost:3000/moneyapi
 // Save yitong order data to database
 const saveYitongOrderData = async (data: any) => {
-  const url = 'http://localhost:3000/moneyapi/yitong'
+  const url = 'https://vn2.dadaex.cn/api/moneyapi/yitong'
   try {
     const res = await axios.post(url, data)
     return res.data
@@ -100,7 +102,7 @@ const saveYitongOrderData = async (data: any) => {
 
 // Get data yitong order from database
 const getYitongOrderDataDb = async () => {
-  const url = 'http://localhost:3000/moneyapi/yitong'
+  const url = 'https://vn2.dadaex.cn/api/moneyapi/yitong'
   try {
     const res = await axios.get(url)
     return res.data
@@ -111,7 +113,7 @@ const getYitongOrderDataDb = async () => {
 
 // Update yitong order data to database
 const updateYitongOrderDataDb = async ({ bookingNo, statusTruck, statusTruckEb }: { bookingNo: string, statusTruck: number, statusTruckEb: number}) => {
-  const url = 'http://localhost:3000/moneyapi/yitong'
+  const url = 'https://vn2.dadaex.cn/api/moneyapi/yitong' // http://localhost:3000/moneyapi
   try {
     const res = await axios.patch(url, {
       bookingNo,
