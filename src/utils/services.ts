@@ -13,8 +13,8 @@ const fetchTruckData = async () => {
 }
 
 // Fetch order data for ONE company
-const fetchOrderData = async ({page, pageSize}: {page: number, pageSize: number}) => {
-  const url = `http://localhost:3001/vn/eir/order?page=${page}&pageSize=${pageSize}&shipCompany=30`
+const fetchOrderData = async ({page, pageSize, blNo}: {page: number, pageSize: number, blNo: string}) => {
+  const url = `http://localhost:3001/vn/eir/order?page=${page}&pageSize=${pageSize}&shipCompany=30&blNo=${blNo}`
   // const url2 = 'https://www.dadaex.cn/api/vn/eir/order'
   try {
     const res = await axios.get(url)
@@ -70,6 +70,23 @@ const getYitongOrderData = async (cookie: string, params: any) => {
   }
 }
 
+// Fill truck for yitong order on website
+const fillTruckForYitongOrder = async (cookie: string, params: any) => {
+  const url = 'https://www.eptrade.cn/epb/batchChangeCarrier.html'
+  try {
+    const formData = new FormData()
+    formData.append('param.appointCarrierCode', params.truckCode)
+    formData.append('param.bookingNos', `["${params.bookingNo}"]`)
+    const headers = {
+      Cookie: cookie,
+    }
+    const res = await axios.post(url, formData, { headers })
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
 // Save yitong order data to database
 const saveYitongOrderData = async (data: any) => {
   const url = 'http://localhost:3000/moneyapi/yitong'
@@ -92,4 +109,28 @@ const getYitongOrderDataDb = async () => {
   }
 }
 
-export { fetchTruckData, fetchOrderData, updateOrderData, getYitongOrderData, saveYitongOrderData, getYitongOrderDataDb }
+// Update yitong order data to database
+const updateYitongOrderDataDb = async ({ bookingNo, statusTruck, statusTruckEb }: { bookingNo: string, statusTruck: number, statusTruckEb: number}) => {
+  const url = 'http://localhost:3000/moneyapi/yitong'
+  try {
+    const res = await axios.patch(url, {
+      bookingNo,
+      statusTruck,
+      statusTruckEb,
+    })
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
+export {
+  fetchTruckData,
+  fetchOrderData,
+  updateOrderData,
+  getYitongOrderData,
+  saveYitongOrderData,
+  getYitongOrderDataDb,
+  updateYitongOrderDataDb,
+  fillTruckForYitongOrder
+}
