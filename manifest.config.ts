@@ -21,6 +21,7 @@ export default defineManifest({
     'storage',
     'tabs',
     'cookies',
+    'alarms',
   ],
   host_permissions: ['*://*.eptrade.cn/*'],
   content_scripts: [{
