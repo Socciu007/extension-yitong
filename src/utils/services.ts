@@ -26,10 +26,25 @@ const fetchOrderData = async ({ page, pageSize, blNo }: { page: number, pageSize
 
 // Update order data
 const updateOrderData = async ({ blNo }: { blNo: string }) => {
-  const url = 'https://www.dadaex.cn/api/vn/yitong/truckCompany'
+  const url = 'https://www.dadaex.cn/api/seaOrder/sendMessageToQQGroup'
   try {
     const data = { blNo }
     const res = await axios.patch(url, data)
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
+// Send message to QQ by API eb
+const sendMessageToQQ = async ({ sobids, message }: { sobids: string[], message: string }) => {
+  const url = 'https://www.dadaex.cn/api/vn/eir/sendMessageToQQ'
+  try {
+    const formData = new FormData()
+    formData.append('sobids', sobids.join(','))
+    formData.append('message', message)
+    formData.append('createLink', '0')
+    const res = await axios.post(url, formData)
     return res.data
   } catch (error) {
     return error
@@ -132,5 +147,6 @@ export {
   saveYitongOrderData,
   getYitongOrderDataDb,
   updateYitongOrderDataDb,
-  fillTruckForYitongOrder
+  fillTruckForYitongOrder,
+  sendMessageToQQ
 }

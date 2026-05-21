@@ -3,7 +3,7 @@ import truckData from "@/mockdata/truckData.json"
 import ButtonComponent from "@/components/ButtonComponent"
 import { showToast, getCookiesEPB } from "./scripts"
 import { useState } from "react"
-import { updateOrderData, fetchOrderData, getYitongOrderData, saveYitongOrderData, getYitongOrderDataDb, fillTruckForYitongOrder, updateYitongOrderDataDb } from "@/utils/services"
+import { updateOrderData, fetchOrderData, getYitongOrderData, saveYitongOrderData, getYitongOrderDataDb, fillTruckForYitongOrder, updateYitongOrderDataDb, sendMessageToQQ } from "@/utils/services"
 
 export default function App() {
   const [loading, setLoading] = useState({count: 0, total: 0})
@@ -91,8 +91,12 @@ export default function App() {
         console.log("resultFill", resultFill)
         if (resultFill?.success === 'Y') {
           truckFilled.push(order?.bookingNo)
-          await updateOrderData({ blNo: order?.bookingNo })
+          const res = await updateOrderData({ blNo: order?.bookingNo })
           await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 1, statusTruckEb: 1 }) // 1: Truck filled
+          console.log("res", res)
+          const message = `Đã điền xe cho đơn hàng ${order?.bookingNo} với mã xe ${truckCode?.value}`
+          const resultSendMessage = await sendMessageToQQ({ sobids: res?.data?.sBind?.sobids || [], message })
+          console.log("resultSendMessage", resultSendMessage)
           setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [...prev.successOrders, order?.bookingNo] }))
         } else {
           setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: prev.successOrders }))

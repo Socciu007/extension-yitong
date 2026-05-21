@@ -1,5 +1,5 @@
 import { getCookiesEPB } from "@/popup/scripts"
-import { getYitongOrderDataDb, fetchOrderData, updateOrderData, updateYitongOrderDataDb, fillTruckForYitongOrder } from "@/utils/services"
+import { getYitongOrderDataDb, fetchOrderData, updateOrderData, updateYitongOrderDataDb, fillTruckForYitongOrder, sendMessageToQQ } from "@/utils/services"
 import truckData from "@/mockdata/truckData.json"
 
 const autoLogin = async () => {
@@ -55,8 +55,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         const resultFill = await fillTruckForYitongOrder(cookies, { truckCode: truckCode?.value, bookingNo: order?.bookingNo })
         if (resultFill?.success === 'Y') {
           truckFilled.push(order?.bookingNo)
-          await updateOrderData({ blNo: order?.bookingNo })
+          const res = await updateOrderData({ blNo: order?.bookingNo })
           await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 1, statusTruckEb: 1 }) // 1: Truck filled
+          console.log("res", res)
+          const message = `Đã điền xe cho đơn hàng ${order?.bookingNo} với mã xe ${truckCode?.value}`
+          const resultSendMessage = await sendMessageToQQ({ sobids: res?.data?.sBind?.sobids || [], message })
+          console.log("resultSendMessage", resultSendMessage)
         }
       }
     }
