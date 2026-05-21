@@ -1,81 +1,143 @@
 import "./App.css"
+import truckData from "@/mockdata/truckData.json"
 import ButtonComponent from "@/components/ButtonComponent"
-import { loadTab, delay, decodeCapcha } from "./scripts"
-import axios from "axios"
-import { Buffer } from "buffer"
+import { showToast, getCookiesEPB } from "./scripts"
+import { useState } from "react"
+import { updateOrderData, fetchOrderData, getYitongOrderData, saveYitongOrderData, getYitongOrderDataDb, fillTruckForYitongOrder, updateYitongOrderDataDb } from "@/utils/services"
 
 export default function App() {
+  const [loading, setLoading] = useState({count: 0, total: 0})
+  const [truckLoading, setTruckLoading] = useState({count: 0, total: 0, successOrders: [] as string[]})
+
   // Handle scrape button click
   const handleStart = async () => {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    })
-    const url = "https://www.eptrade.cn/epb/login/scno_direct_bk.html"
+    // Get yitong order data
+    const cookies = await getCookiesEPB()
+    if (!cookies) {
+      showToast("Please login to the system!", "warning")
+      return
+    }
 
-    // Load URL
-    await chrome.tabs.update(tab.id, { url })
-    // Wait for tab to load
-    await loadTab(tab)
+    let count = 0
+    const getOrderData = await getYitongOrderDataDb('0')
+    const { rows, total } = await getYitongOrderData(cookies, { page: 1, rows: 100 })
+    const totalRows = total - (getOrderData?.orders?.length || 0)
+    setLoading({ count: 0, total: totalRows })
+    if (rows && rows.length > 0) {
+      // Save yitong order data to database
+      const resultSave = await saveYitongOrderData(
+        rows.map((o: any) => ({ ...o, statusTruck: 0, statusTruckEb: 0 }))
+      )
+      console.log("resultSave", resultSave)
+      count += resultSave?.result?.added || 0
+      setLoading((prev) => ({
+        ...prev,
+        count: prev.count + (resultSave?.result?.added || 0),
+      }))
+    }
+    const totalPage = Math.ceil(totalRows / 100);
+    for (let i = 2; i <= totalPage; i++) {
+      const { rows: rowsTemp } = await getYitongOrderData(cookies, { page: i, rows: 100 })
+      if (rowsTemp && rowsTemp.length > 0) {
+        // Save yitong order data to database
+        const resultSave = await saveYitongOrderData(
+          rowsTemp.map((o: any) => ({ ...o, statusTruck: 0, statusTruckEb: 0 }))
+        )
+        console.log(`resultSave${i}`, resultSave)
+        count += resultSave?.result?.added || 0
+        setLoading((prev) => ({ ...prev, count: prev.count + (resultSave?.result?.added || 0) }))
+      }
+    }
+    showToast(`Finish scraped yitong orders`, "success")
+    const resultElement: HTMLElement | null = document.getElementById("result")
+    if (resultElement) {
+      resultElement.textContent = ""
+      resultElement.textContent = `Scraped ${count} new orders from yitong!`
+    }
+    setLoading({ count: 0, total: 0 })
+  }
 
-    // Action Login
-    const urlImg = await chrome.scripting.executeScript({
-      target: { tabId: tab.id as number },
-      func: async () => {
-        try {
-          console.log("Start action login....")
-          const tabLogin = document.querySelectorAll(".tabs-title") as NodeListOf<Element>
-          if (tabLogin) (tabLogin[1] as HTMLAnchorElement).click()
-          
-          const username = document.querySelector("#user_id") as HTMLInputElement
-          if (username) username.value = "CN122887"
-          const password = document.querySelector("#user_pwd" ) as HTMLInputElement
-          if (password) password.value = "imND3I26"
-          const capchaCodeImg = document.querySelector("#safecode") as HTMLButtonElement
-          if (capchaCodeImg) {
-            const urlImg = capchaCodeImg.getAttribute("src")
-            return urlImg
-          }
-          // const loginBtn = document.querySelector("#btnLogin") as HTMLButtonElement
-          // if (loginBtn) loginBtn.click()
-        } catch (error) {
-          console.error("Error login in the page", error)
+  // Handle truck select for yitong orders on website
+  const handleTruck = async () => {
+    const cookies = await getCookiesEPB()
+    if (!cookies) {
+      showToast("Please login to the system!", "warning")
+      return
+    }
+
+    let truckFilled: string[] = [];
+    const getOrderData = await getYitongOrderDataDb('2')
+    setTruckLoading({ count: 0, total: getOrderData?.orders?.length || 0, successOrders: [] })
+    for (let i = 0; i < getOrderData?.orders?.length; i++) {
+      const order = getOrderData?.orders[i]
+      if (!order.bookingNo) {
+        setTruckLoading((prev) => ({ ...prev, count: prev.count + 1 }))
+        continue
+      }
+      // Fetch order data
+      const { data } = await fetchOrderData({ page: 1, pageSize: 10, blNo: order.bookingNo })
+      console.log("data", data[0]?.order)
+      if (data.length === 0 || !data[0]?.order?.trailerCompany) {
+        setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [] }))
+        await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 0, statusTruckEb: 2 }) // 2: No truck found
+        continue
+      }
+
+      // Find truck code
+      const truckCode = truckData?.find((o: any) => o.id === data[0]?.order?.trailerCompany)
+      if (truckCode && truckCode?.value) {
+        // Fill truck for yitong order on website
+        const resultFill = await fillTruckForYitongOrder(cookies, { truckCode: truckCode?.value, bookingNo: order?.bookingNo })
+        console.log("resultFill", resultFill)
+        if (resultFill?.success === 'Y') {
+          truckFilled.push(order?.bookingNo)
+          await updateOrderData({ blNo: order?.bookingNo })
+          await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 1, statusTruckEb: 1 }) // 1: Truck filled
+          setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [...prev.successOrders, order?.bookingNo] }))
+        } else {
+          setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: prev.successOrders }))
         }
-      },
-    })
-    await delay(1000)
+      }
+    }
 
-    const toBase64 = await axios.get(`https://www.eptrade.cn/epb/login/${urlImg}`, { responseType: "arraybuffer" })
-    console.log("toBase64", toBase64)
-    console.log(
-      "toBase64",
-      Buffer.from(toBase64.data, "binary").toString("base64")
-    );
-    const capchaCode = await decodeCapcha(Buffer.from(toBase64.data, "binary").toString("base64"))
-    console.log("capchaCode", capchaCode)
-    //   if (capchaCode) {
-    //     const capchaCodeInput = document.querySelectorAll(
-    //       'input[name="ck"]'
-    //     )[1] as HTMLInputElement
-    //     if (capchaCodeInput) capchaCodeInput.value = capchaCode
-    //   }
-    // }
-
-
-    await delay(5000)
+    // Show result on popup and noification
+    const resultElement: HTMLElement | null = document.getElementById("result")
+    if (resultElement) {
+      resultElement.textContent = ""
+      resultElement.textContent = `Filled truck for ${truckFilled.length} yitong orders: ${truckFilled.join(", ")}`
+    }
+    showToast(`Finish fill truck for yitong orders!`, "success")
+    setTruckLoading({ count: 0, total: 0, successOrders: [] })
   }
   return (
     <div className="mb-2">
-      <div id='notification' className="absolute top-[1rem] right-[2rem] p-1 rounded-md shadow-lg"></div>
-      <h3 className="text-2xl leading-10">Hello world!</h3>
-      <div className="flex gap-2 items-center justify-center">
+      <div
+        id="notification"
+        className="absolute top-[1rem] right-[2rem] p-1 rounded-md shadow-lg"
+      ></div>
+      <div className="text-center text-2xl font-bold mb-2 text-[#99BBE8]">
+        YITONG EPB
+      </div>
+      <div className="flex gap-2 justify-center">
         <ButtonComponent
           onClick={handleStart}
-          text="Start"
+          disabled={loading.total > 0}
+          text={loading.total > 0 ? `Processing(${loading.count}/${loading.total})...` : "Scrape order"}
           id="start"
-          className=""
+          classNameProps={`mt-2 ${loading.total > 0 ? "bg-[#ccc]" : "bg-[#277fbc]"} px-4 py-2`}
+        />
+        <ButtonComponent
+          onClick={handleTruck}
+          disabled={truckLoading.total > 0}
+          text={truckLoading.total > 0 ? `Processing(${truckLoading.count}/${truckLoading.total})...` : "Truck order"}
+          id="truck"
+          classNameProps={`mt-2 ${truckLoading.total > 0 ? "bg-[#ccc]" : "bg-[#277fbc]"} px-4 py-2`}
         />
       </div>
+      <div className="mt-2">
+        {truckLoading.successOrders.length > 0 && `Success orders: ${truckLoading.successOrders.join(", ")}`}
+      </div>
+      <div id="result" className="mt-1"></div>
     </div>
-  )
+  );
 }
