@@ -14,6 +14,9 @@ export default defineManifest({
     },
     default_popup: 'src/popup/index.html',
   },
+  background: {
+    "service_worker": "background.js"
+  },
   permissions: [
     'contentSettings',
     'activeTab',
@@ -26,7 +29,7 @@ export default defineManifest({
   host_permissions: ['*://*.eptrade.cn/*'],
   content_scripts: [{
     js: ['src/content/features/index.ts'],
-    matches: ['https://*/*'],
+    matches: ['https://www.eptrade.cn/*'],
   }],
   side_panel: {
     default_path: 'src/sidepanel/index.html',

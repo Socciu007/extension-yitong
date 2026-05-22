@@ -26,7 +26,7 @@ const fetchOrderData = async ({ page, pageSize, blNo }: { page: number, pageSize
 
 // Update order data
 const updateOrderData = async ({ blNo }: { blNo: string }) => {
-  const url = 'https://www.dadaex.cn/api/seaOrder/sendMessageToQQGroup'
+  const url = 'https://www.dadaex.cn/api/vn/yitong/truckCompany'
   try {
     const data = { blNo }
     const res = await axios.patch(url, data)
@@ -38,7 +38,7 @@ const updateOrderData = async ({ blNo }: { blNo: string }) => {
 
 // Send message to QQ by API eb
 const sendMessageToQQ = async ({ sobids, message }: { sobids: string[], message: string }) => {
-  const url = 'https://www.dadaex.cn/api/vn/eir/sendMessageToQQ'
+  const url = 'https://www.dadaex.cn/api/seaOrder/sendMessageToQQGroup'
   try {
     const formData = new FormData()
     formData.append('sobids', sobids.join(','))
@@ -53,7 +53,7 @@ const sendMessageToQQ = async ({ sobids, message }: { sobids: string[], message:
 
 // Yitong WEP API
 // Get yitong order data from eptrade
-const getYitongOrderData = async (cookie: string, params: any) => {
+const getYitongOrderData = async (cookie: string | null, params: any) => {
   const url = 'https://www.eptrade.cn/epb/cdus.html?method=search1'
   try {
     // Add params to form data
@@ -84,7 +84,7 @@ const getYitongOrderData = async (cookie: string, params: any) => {
 }
 
 // Fill truck for yitong order on website
-const fillTruckForYitongOrder = async (cookie: string, params: any) => {
+const fillTruckForYitongOrder = async (cookie: string | null, params: any) => {
   const url = 'https://www.eptrade.cn/epb/batchChangeCarrier.html'
   try {
     const formData = new FormData()
