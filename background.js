@@ -1,7 +1,7 @@
 // Sync task every 30 minutes
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("syncTaskMain", {
-    periodInMinutes: 25
+    periodInMinutes: 20
   })
   chrome.alarms.create("syncTaskLoginEPB", {
     periodInMinutes: 15
