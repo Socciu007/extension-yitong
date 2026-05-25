@@ -162,7 +162,7 @@ export default function App() {
     let truckFilled: string[] = []
     const getOrderData = await getYitongOrderDataDb('2')
     setTruckLoading({ count: 0, total: getOrderData?.orders?.length || 0, successOrders: [] })
-    for (let i = 0; i < getOrderData?.orders?.splice(0, 5)?.length; i++) {
+    for (let i = 0; i < getOrderData?.orders?.length; i++) {
       const order = getOrderData?.orders[i]
       if (!order.bookingNo) {
         setTruckLoading((prev) => ({ ...prev, count: prev.count + 1 }))
