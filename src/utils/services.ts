@@ -25,11 +25,22 @@ const fetchOrderData = async ({ page, pageSize, blNo }: { page: number, pageSize
 }
 
 // Update order data
-const updateOrderData = async ({ blNo }: { blNo: string }) => {
+const updateOrderData = async ({ blNo, yitongOrder }: { blNo: string, yitongOrder?: number }) => {
   const url = 'https://www.dadaex.cn/api/vn/yitong/truckCompany'
   try {
-    const data = { blNo }
+    const data = { blNo, yitongOrder }
     const res = await axios.patch(url, data)
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
+// Get order in eb system
+const getOrderInEb = async () => {
+  const url = 'https://www.dadaex.cn/api/vn/yitong/seaOrderList'
+  try {
+    const res = await axios.get(url)
     return res.data
   } catch (error) {
     return error
@@ -52,6 +63,23 @@ const sendMessageToQQ = async ({ sobids, message }: { sobids: string[], message:
 }
 
 // Yitong WEP API
+// Import order to yitong
+const importOrderToYitong = async (cookie: string | null, data: any) => {
+  const url = 'https://www.eptrade.cn/epb/bindingBooking.html'
+  try {
+    const headers = {
+      Cookie: cookie,
+    }
+    const formData = new FormData()
+    formData.append('param.bindingBookingNo', data.blNo)
+    formData.append('param.bindingScNo', data.appointNub)
+    const res = await axios.post(url, data, { headers })
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
 // Get yitong order data from eptrade
 const getYitongOrderData = async (cookie: string | null, params: any) => {
   const url = 'https://www.eptrade.cn/epb/cdus.html?method=search1'
@@ -148,5 +176,7 @@ export {
   getYitongOrderDataDb,
   updateYitongOrderDataDb,
   fillTruckForYitongOrder,
-  sendMessageToQQ
+  sendMessageToQQ,
+  getOrderInEb,
+  importOrderToYitong
 }

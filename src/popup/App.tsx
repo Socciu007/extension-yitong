@@ -3,7 +3,18 @@ import truckData from "@/mockdata/truckData.json"
 import ButtonComponent from "@/components/ButtonComponent"
 import { showToast, getCookiesEPB } from "./scripts"
 import { useState, useEffect } from "react"
-import { updateOrderData, fetchOrderData, getYitongOrderData, saveYitongOrderData, getYitongOrderDataDb, fillTruckForYitongOrder, updateYitongOrderDataDb, sendMessageToQQ } from "@/utils/services"
+import {
+  updateOrderData,
+  fetchOrderData,
+  getYitongOrderData,
+  saveYitongOrderData,
+  getYitongOrderDataDb,
+  fillTruckForYitongOrder,
+  updateYitongOrderDataDb,
+  sendMessageToQQ,
+  getOrderInEb,
+  importOrderToYitong
+} from "@/utils/services"
 
 export default function App() {
   const [loading, setLoading] = useState({count: 0, total: 0})
@@ -85,6 +96,38 @@ export default function App() {
     }
     return truckFilled
   }
+
+  const syncOrderEbWithYitong = async () => {
+    if (!cookiesEPB) {
+      const cookies = await getCookiesEPB()
+      if (!cookies) return false;
+      setCookiesEPB(cookies)
+    }
+
+    console.log("Sync order's eb with yitong...")
+    const result = await getOrderInEb()
+    console.log("result", result);
+
+    if (result?.data && result?.data?.length > 0) {
+      for (let i = 0; i < result?.data?.length; i++) {
+        const { blNo, appointNub } = result?.data[i];
+        // Import order to yitong
+        const resultImport = await importOrderToYitong(cookiesEPB, {
+          blNo: blNo,
+          appointNub: appointNub,
+        })
+
+        if (resultImport?.success === "Y") {
+          await updateOrderData({
+            blNo: blNo.includes("ONEY")
+              ? blNo
+              : "ONEY" + blNo,
+            yitongOrder: 2,
+          });
+        }
+      }
+    }
+  }
   useEffect(() => {
     chrome.runtime.onMessage.addListener(async (msg) => {
       if (msg.type === "UPDATE_RESULT") {
@@ -94,6 +137,10 @@ export default function App() {
       if (msg.type === "LOGIN_AGAIN_EPB") {
         const cookies = await getCookiesEPB()
         if (cookies) setCookiesEPB(cookies)
+      }
+      if (msg.type === "SYNC_ORDER_EB_WITH_YITONG") {
+        const result = await syncOrderEbWithYitong()
+        console.log("SYNC_ORDER_EB_WITH_YITONG", result);
       }
     })
   }, [])
@@ -193,7 +240,7 @@ export default function App() {
           console.log("resultSendMessage", resultSendMessage)
           setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [...prev.successOrders, order?.bookingNo] }))
         } else {
-          setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: prev.successOrders }))
+          setTruckLoading((prev) => ({ ...prev, count: prev.count + 1 }))
         }
       }
     }
