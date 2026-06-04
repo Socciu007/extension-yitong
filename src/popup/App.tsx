@@ -127,6 +127,17 @@ export default function App() {
         }
       }
     }
+
+    // Get yitong order data
+    const { rows } = await getYitongOrderData(cookiesEPB, {
+      page: 1,
+      rows: 100,
+    });
+    if (rows && rows.length > 0) {
+      // Save yitong order data to database
+      const resultSave = await saveYitongOrderData(rows.map((o: any) => ({ ...o, statusTruck: 0, statusTruckEb: 0 })));
+      console.log("resultSave", resultSave);
+    }
   }
   useEffect(() => {
     chrome.runtime.onMessage.addListener(async (msg) => {
