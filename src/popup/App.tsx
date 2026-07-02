@@ -187,14 +187,12 @@ export default function App() {
             });
 
             // Save blNo of successfully filled truck to local storage
-            filledBlNoSet.add(order.blNo);
-            await chrome.storage.local.set({
-              filledTruckBlNos: Array.from(filledBlNoSet),
-            });
-            console.log(
-              "FETCH_VN_EIR_ORDER_1_MONTH filledTruckBlNos:",
-              Array.from(filledBlNoSet)
-            );
+            if (!filledBlNoSet.has(order.blNo)) {
+              filledBlNoSet.add(order.blNo);
+              await chrome.storage.local.set({
+                filledTruckBlNos: Array.from(filledBlNoSet),
+              });
+            }
 
             console.log("FETCH_VN_EIR_ORDER_1_MONTH", res);
 
