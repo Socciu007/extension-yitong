@@ -153,6 +153,61 @@ export default function App() {
         const result = await syncOrderEbWithYitong()
         console.log("SYNC_ORDER_EB_WITH_YITONG", result);
       }
+      if (msg.type === "FETCH_VN_EIR_ORDER_1_MONTH" && msg.data && msg.data.length > 0) {
+        // Read filled blNos once before the loop to skip already-processed orders
+        const stored = await chrome.storage.local.get("filledTruckBlNos");
+        const filledBlNoSet = new Set<string>(
+          Array.isArray(stored.filledTruckBlNos) ? stored.filledTruckBlNos : []
+        );
+        for (let i = 0; i < msg.data.length; i++) {
+          const order = msg.data[i];
+          if (!order.blNo || !order.trailerCompany) continue;
+          // Skip if this blNo has already been filled successfully
+          if (filledBlNoSet.has(order.blNo)) continue;
+
+          // Find truck code
+          const truckCode = truckData?.find((o: any) => o.id === order.trailerCompany);
+
+          // Fill truck for yitong order on website
+          const resultFill = await fillTruckForYitongOrder(cookiesEPB, {
+            truckCode: truckCode?.value,
+            bookingNo: order.blNo,
+          });
+          if (resultFill?.success === "Y") {
+            const res = await updateOrderData({
+              blNo: order?.blNo?.includes("ONEY")
+                ? order?.blNo
+                : "ONEY" + order?.blNo,
+              yitongOrder: 2,
+            });
+            await updateYitongOrderDataDb({
+              bookingNo: order?.blNo,
+              statusTruck: 1,
+              statusTruckEb: 1,
+            });
+
+            // Save blNo of successfully filled truck to local storage
+            filledBlNoSet.add(order.blNo);
+            await chrome.storage.local.set({
+              filledTruckBlNos: Array.from(filledBlNoSet),
+            });
+            console.log(
+              "FETCH_VN_EIR_ORDER_1_MONTH filledTruckBlNos:",
+              Array.from(filledBlNoSet)
+            );
+
+            console.log("FETCH_VN_EIR_ORDER_1_MONTH", res);
+
+            // Send message to QQ
+            const message = `${order?.bookingNo}---指定放箱成功`;
+            const resultSendMessage = await sendMessageToQQ({
+              sobids: res?.data?.map((o: any) => o.id.toString()) || [],
+              message,
+            });
+            console.log("FETCH_VN_EIR_ORDER_1_MONTH msgQQ", resultSendMessage);
+          }
+        }
+      }
     })
   }, [])
 

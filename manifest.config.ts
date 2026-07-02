@@ -26,7 +26,7 @@ export default defineManifest({
     'cookies',
     'alarms',
   ],
-  host_permissions: ['*://*.eptrade.cn/*'],
+  host_permissions: ['*://*.eptrade.cn/*', '*://*.dadaex.cn/*'],
   content_scripts: [{
     js: ['src/content/features/index.ts'],
     matches: ['https://www.eptrade.cn/*'],
