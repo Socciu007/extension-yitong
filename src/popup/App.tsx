@@ -121,7 +121,7 @@ export default function App() {
             blNo: blNo.includes("ONEY")
               ? blNo
               : "ONEY" + blNo,
-            yitongOrder: 2,
+            yitongOrder: 1,
           });
         }
       }
@@ -198,7 +198,7 @@ export default function App() {
             console.log("FETCH_VN_EIR_ORDER_1_MONTH", res);
 
             // Send message to QQ
-            const message = `${order?.bookingNo}---指定放箱成功`;
+            const message = `${order?.blNo}---指定放箱成功`;
             const resultSendMessage = await sendMessageToQQ({
               sobids: res?.data?.map((o: any) => o.id.toString()) || [],
               message,

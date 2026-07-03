@@ -26,7 +26,7 @@ const fetchOrderData = async ({ page, pageSize, blNo }: { page: number, pageSize
 
 // Update order data
 const updateOrderData = async ({ blNo, yitongOrder }: { blNo: string, yitongOrder?: number }) => {
-  const url = 'http://localhost:3001/vn/yitong/truckCompany'
+  const url = 'https://www.dadaex.cn/api/vn/yitong/truckCompany'
   try {
     const data = { blNo, yitongOrder }
     const res = await axios.patch(url, data)

@@ -30,7 +30,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     console.log("Fetch VN EIR order 1 month")
     try {
       // http://localhost:3001 https://www.dadaex.cn/api/vn/eir/order/1month
-      const response = await fetch("http://localhost:3001/vn/eir/order/1month")
+      const response = await fetch("https://www.dadaex.cn/api/vn/eir/order/1month")
       if (!response.ok) {
         console.error(`Fetch failed: ${response.status} ${response.statusText}`)
         return
