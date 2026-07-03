@@ -104,7 +104,6 @@ export default function App() {
       setCookiesEPB(cookies)
     }
 
-    console.log("Sync order's eb with yitong...")
     const result = await getOrderInEb()
     console.log("result", result);
 
@@ -136,8 +135,9 @@ export default function App() {
     if (rows && rows.length > 0) {
       // Save yitong order data to database
       const resultSave = await saveYitongOrderData(rows.map((o: any) => ({ ...o, statusTruck: 0, statusTruckEb: 0 })));
-      console.log("resultSave", resultSave);
+      return resultSave;
     }
+    return false;
   }
   useEffect(() => {
     chrome.runtime.onMessage.addListener(async (msg) => {
@@ -154,6 +154,7 @@ export default function App() {
         console.log("SYNC_ORDER_EB_WITH_YITONG", result);
       }
       if (msg.type === "FETCH_VN_EIR_ORDER_1_MONTH" && msg.data && msg.data.length > 0) {
+        console.log("FETCH_VN_EIR_ORDER_1_MONTH", msg.data);
         // Read filled blNos once before the loop to skip already-processed orders
         const stored = await chrome.storage.local.get("filledTruckBlNos");
         const filledBlNoSet = new Set<string>(
@@ -167,18 +168,19 @@ export default function App() {
 
           // Find truck code
           const truckCode = truckData?.find((o: any) => o.id === order.trailerCompany);
+          if (!truckCode || !truckCode?.value) continue;
 
           // Fill truck for yitong order on website
           const resultFill = await fillTruckForYitongOrder(cookiesEPB, {
             truckCode: truckCode?.value,
-            bookingNo: order.blNo,
+            bookingNo: order.blNo.includes("ONEY") ? order.blNo.slice(4) : order.blNo,
           });
+          console.log("resultFill1", resultFill);
           if (resultFill?.success === "Y") {
             const res = await updateOrderData({
               blNo: order?.blNo?.includes("ONEY")
                 ? order?.blNo
                 : "ONEY" + order?.blNo,
-              yitongOrder: 2,
             });
             await updateYitongOrderDataDb({
               bookingNo: order?.blNo,
@@ -193,7 +195,6 @@ export default function App() {
                 filledTruckBlNos: Array.from(filledBlNoSet),
               });
             }
-
             console.log("FETCH_VN_EIR_ORDER_1_MONTH", res);
 
             // Send message to QQ
