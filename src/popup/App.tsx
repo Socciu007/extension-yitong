@@ -26,30 +26,27 @@ export default function App() {
     if (!cookies) return false;
     setCookiesEPB(cookies)
 
-    console.log("Scrape yitong orders...")
     const { rows } = await getYitongOrderData(cookiesEPB, {
       page: 1,
       rows: 100,
     })
     // Save yitong order data to database
     if (rows && rows.length > 0) {
-      await saveYitongOrderData(
+      const resultSave = await saveYitongOrderData(
         rows.map((o: any) => ({ ...o, statusTruck: 0, statusTruckEb: 0 }))
       )
+      console.log("Save yitong order data to vn2", resultSave);
     }
 
-    console.log("Fill truck for yitong orders...")
     // Fill truck for yitong orders
     let truckFilled: string[] = []
     const getOrderData = await getYitongOrderDataDb("2")
-    console.log("getOrderData", getOrderData.orders)
     if (getOrderData && getOrderData.orders && getOrderData.orders.length > 0) {
       for (let i = 0; i < getOrderData.orders.length; i++) {
         const order = getOrderData.orders[i];
         if (!order.bookingNo) continue;
-        // Fetch order data
+        // Fetch information order data from eb
         const { data } = await fetchOrderData({ page: 1, pageSize: 10, blNo: order.bookingNo })
-        console.log("data", data[0]?.order)
         if (data.length === 0 || !data[0]?.order?.trailerCompany) {
           await updateYitongOrderDataDb({
             bookingNo: order?.bookingNo,
@@ -67,7 +64,7 @@ export default function App() {
             truckCode: truckCode?.value,
             bookingNo: order?.bookingNo,
           });
-          console.log("resultFill", resultFill);
+          console.log("Fill truck for yitong order main task", resultFill);
           if (resultFill?.success === "Y") {
             truckFilled.push(order?.bookingNo);
             const res = await updateOrderData({ blNo: order?.bookingNo });
@@ -76,13 +73,12 @@ export default function App() {
               statusTruck: 1,
               statusTruckEb: 1,
             })
-            console.log("resUpdate", res)
+            console.log("Result update yitong order main task", res)
             const message = `${order?.bookingNo}---指定放箱成功`
-            const resultSendMessage = await sendMessageToQQ({
+            await sendMessageToQQ({
               sobids: res?.data?.sBind?.sobids || [],
               message,
             });
-            console.log("resultSendMessage", resultSendMessage)
           }
         }
       }
@@ -154,7 +150,6 @@ export default function App() {
         console.log("SYNC_ORDER_EB_WITH_YITONG", result);
       }
       if (msg.type === "FETCH_VN_EIR_ORDER_1_MONTH" && msg.data && msg.data.length > 0) {
-        console.log("FETCH_VN_EIR_ORDER_1_MONTH", msg.data);
         // Read filled blNos once before the loop to skip already-processed orders
         const stored = await chrome.storage.local.get("filledTruckBlNos");
         const filledBlNoSet = new Set<string>(
@@ -175,7 +170,7 @@ export default function App() {
             truckCode: truckCode?.value,
             bookingNo: order.blNo.includes("ONEY") ? order.blNo.slice(4) : order.blNo,
           });
-          console.log("resultFill1", resultFill);
+          console.log("Fill yitong order", resultFill);
           if (resultFill?.success === "Y") {
             const res = await updateOrderData({
               blNo: order?.blNo?.includes("ONEY")
@@ -195,15 +190,14 @@ export default function App() {
                 filledTruckBlNos: Array.from(filledBlNoSet),
               });
             }
-            console.log("FETCH_VN_EIR_ORDER_1_MONTH", res);
+            console.log("Result update yitong order", res);
 
             // Send message to QQ
             const message = `${order?.blNo}---指定放箱成功`;
-            const resultSendMessage = await sendMessageToQQ({
+            await sendMessageToQQ({
               sobids: res?.data?.map((o: any) => o.id.toString()) || [],
               message,
             });
-            console.log("FETCH_VN_EIR_ORDER_1_MONTH msgQQ", resultSendMessage);
           }
         }
       }
@@ -234,7 +228,7 @@ export default function App() {
       const resultSave = await saveYitongOrderData(
         rows.map((o: any) => ({ ...o, statusTruck: 0, statusTruckEb: 0 }))
       )
-      console.log("resultSave", resultSave)
+      console.log("Save yitong order data to vn2", resultSave);
       count += resultSave?.result?.added || 0
       setLoading((prev) => ({
         ...prev,
@@ -249,7 +243,7 @@ export default function App() {
         const resultSave = await saveYitongOrderData(
           rowsTemp.map((o: any) => ({ ...o, statusTruck: 0, statusTruckEb: 0 }))
         )
-        console.log(`resultSave${i}`, resultSave)
+        console.log("Save yitong order data to vn2", resultSave);
         count += resultSave?.result?.added || 0
         setLoading((prev) => ({ ...prev, count: prev.count + (resultSave?.result?.added || 0) }))
       }
@@ -282,7 +276,6 @@ export default function App() {
       }
       // Fetch order data
       const { data } = await fetchOrderData({ page: 1, pageSize: 10, blNo: order.bookingNo })
-      console.log("data", data[0]?.order)
       if (data.length === 0 || !data[0]?.order?.trailerCompany) {
         setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [] }))
         await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 0, statusTruckEb: 2 }) // 2: No truck found
@@ -299,7 +292,6 @@ export default function App() {
           truckFilled.push(order?.bookingNo)
           const res = await updateOrderData({ blNo: order?.bookingNo?.includes('ONEY') ? order?.bookingNo : 'ONEY' + order?.bookingNo })
           await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 1, statusTruckEb: 1 }) // 1: Truck filled
-          console.log("resUpdate", res)
           const message = `${order?.bookingNo}---指定放箱成功`
           const resultSendMessage = await sendMessageToQQ({ sobids: res?.data?.map((o: any) => o.id.toString()) || [], message })
           console.log("resultSendMessage", resultSendMessage)
