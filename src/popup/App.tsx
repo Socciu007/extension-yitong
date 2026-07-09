@@ -13,7 +13,8 @@ import {
   updateYitongOrderDataDb,
   sendMessageToQQ,
   getOrderInEb,
-  importOrderToYitong
+  importOrderToYitong,
+  sendMail,
 } from "@/utils/services"
 
 export default function App() {
@@ -152,6 +153,8 @@ export default function App() {
       if (msg.type === "FETCH_VN_EIR_ORDER_1_MONTH" && msg.data && msg.data.length > 0) {
         // Read filled blNos once before the loop to skip already-processed orders
         const stored = await chrome.storage.local.get("filledTruckBlNos");
+        const storedMailFailed = await chrome.storage.local.get("mailFailedBlNos");
+        const mailFailedBlNoSet = new Set<string>(Array.isArray(storedMailFailed.mailFailedBlNos) ? storedMailFailed.mailFailedBlNos : []);
         const filledBlNoSet = new Set<string>(
           Array.isArray(stored.filledTruckBlNos) ? stored.filledTruckBlNos : []
         );
@@ -192,12 +195,32 @@ export default function App() {
             }
             console.log("Result update yitong order", res);
 
+            // Send mail to admin
+            await sendMail({
+              subject: `[${order?.blNo}]-Yitong EPB`,
+              text: `${order?.blNo}---success`,
+              to: "904288354@qq.com",
+            });
+
             // Send message to QQ
             const message = `${order?.blNo}---指定放箱成功`;
             await sendMessageToQQ({
               sobids: res?.data?.map((o: any) => o.id.toString()) || [],
               message,
             });
+          } else {
+            // Send mail
+            if (!mailFailedBlNoSet.has(order.blNo)) {
+              mailFailedBlNoSet.add(order.blNo);
+              await sendMail({
+                subject: `[${order?.blNo}]-Yitong EPB`,
+                text: `${order?.blNo}---failed`,
+                to: "904288354@qq.com",
+              });
+              await chrome.storage.local.set({
+                mailFailedBlNos: Array.from(mailFailedBlNoSet),
+              });
+            }
           }
         }
       }

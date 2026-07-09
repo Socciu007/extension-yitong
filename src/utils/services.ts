@@ -167,6 +167,17 @@ const updateYitongOrderDataDb = async ({ bookingNo, statusTruck, statusTruckEb }
   }
 }
 
+// Send Mail by API
+const sendMail = async ({ subject, text, to }: { subject: string, text: string, to: string | string[] }) => {
+  const url = 'https://www.dadaex.cn/api/mail/send'
+  try {
+    const res = await axios.post(url, { subject, text, to })
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
 export {
   fetchTruckData,
   fetchOrderData,
@@ -178,5 +189,6 @@ export {
   fillTruckForYitongOrder,
   sendMessageToQQ,
   getOrderInEb,
-  importOrderToYitong
+  importOrderToYitong,
+  sendMail,
 }
