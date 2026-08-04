@@ -198,7 +198,7 @@ export default function App() {
             // Send mail to admin
             await sendMail({
               subject: `[${order?.blNo}]-Yitong EPB`,
-              text: `${order?.blNo}---success`,
+              text: `${order?.blNo}---指定放箱成功`,
               to: "904288354@qq.com",
             });
 
@@ -214,7 +214,7 @@ export default function App() {
               mailFailedBlNoSet.add(order.blNo);
               await sendMail({
                 subject: `[${order?.blNo}]-Yitong EPB`,
-                text: `${order?.blNo}---failed`,
+                text: `${order?.blNo}---指定放箱失败`,
                 to: "904288354@qq.com",
               });
               await chrome.storage.local.set({
