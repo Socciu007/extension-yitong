@@ -74,6 +74,13 @@ export default function App() {
               statusTruck: 1,
               statusTruckEb: 1,
             })
+            // Send mail to admin
+            await sendMail({
+              subject: `[${order?.blNo}]-填写进亿通系统`,
+              text: "填写进亿通系统-成功.",
+              to: "904288354@qq.com",
+            });
+            // Send message to QQ
             console.log("Result update yitong order main task", res)
             const message = `${order?.bookingNo}---指定放箱成功`
             await sendMessageToQQ({
@@ -197,8 +204,8 @@ export default function App() {
 
             // Send mail to admin
             await sendMail({
-              subject: `[${order?.blNo}]-Yitong EPB`,
-              text: `${order?.blNo}---指定放箱成功`,
+              subject: `[${order?.blNo}]-填写进亿通系统`,
+              text: "填写进亿通系统-成功.",
               to: "904288354@qq.com",
             });
 
@@ -213,8 +220,8 @@ export default function App() {
             if (!mailFailedBlNoSet.has(order.blNo)) {
               mailFailedBlNoSet.add(order.blNo);
               await sendMail({
-                subject: `[${order?.blNo}]-Yitong EPB`,
-                text: `${order?.blNo}---指定放箱失败`,
+                subject: `[${order?.blNo}]-填写进亿通系统`,
+                text: "填写进亿通系统-失败",
                 to: "904288354@qq.com",
               });
               await chrome.storage.local.set({
