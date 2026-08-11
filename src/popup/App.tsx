@@ -76,7 +76,7 @@ export default function App() {
             })
             // Send mail to admin
             await sendMail({
-              subject: `[${order?.blNo}]-填写进亿通系统`,
+              subject: `[${order?.bookingNo}]-填写进亿通系统`,
               text: "填写进亿通系统-成功.",
               to: "904288354@qq.com",
             });
