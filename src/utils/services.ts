@@ -12,12 +12,11 @@ const fetchTruckData = async () => {
   }
 }
 
-// Fetch order data for ONE company
-const fetchOrderData = async ({ page, pageSize, blNo }: { page: number, pageSize: number, blNo: string }) => {
-  const url = `https://www.dadaex.cn/api/vn/eir/order?page=${page}&pageSize=${pageSize}&shipCompany=30&blNo=${blNo}`
-  // const url2 = 'https://www.dadaex.cn/api/vn/eir/order'
+// Get information truck from eb system
+const getInformationTruckFromEb = async (orders: string[] | string) => {
+  const url = 'http://localhost:3001/vn/yitong/truckCompanyInfos'
   try {
-    const res = await axios.get(url)
+    const res = await axios.post(url, { blNos: orders })
     return res.data
   } catch (error) {
     return error
@@ -180,7 +179,6 @@ const sendMail = async ({ subject, text, to }: { subject: string, text: string, 
 
 export {
   fetchTruckData,
-  fetchOrderData,
   updateOrderData,
   getYitongOrderData,
   saveYitongOrderData,
@@ -191,4 +189,5 @@ export {
   getOrderInEb,
   importOrderToYitong,
   sendMail,
+  getInformationTruckFromEb
 }

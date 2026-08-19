@@ -5,7 +5,6 @@ import { showToast, getCookiesEPB } from "./scripts"
 import { useState, useEffect } from "react"
 import {
   updateOrderData,
-  fetchOrderData,
   getYitongOrderData,
   saveYitongOrderData,
   getYitongOrderDataDb,
@@ -15,6 +14,7 @@ import {
   getOrderInEb,
   importOrderToYitong,
   sendMail,
+  getInformationTruckFromEb,
 } from "@/utils/services"
 
 export default function App() {
@@ -43,46 +43,43 @@ export default function App() {
     let truckFilled: string[] = []
     const getOrderData = await getYitongOrderDataDb("2")
     if (getOrderData && getOrderData.orders && getOrderData.orders.length > 0) {
-      for (let i = 0; i < getOrderData.orders.length; i++) {
-        const order = getOrderData.orders[i];
-        if (!order.bookingNo) continue;
-        // Fetch information order data from eb
-        const { data } = await fetchOrderData({ page: 1, pageSize: 10, blNo: order.bookingNo })
-        if (data.length === 0 || !data[0]?.order?.trailerCompany) {
-          await updateYitongOrderDataDb({
-            bookingNo: order?.bookingNo,
-            statusTruck: 0,
-            statusTruckEb: 2,
-          }) // 2: No truck found
-          continue
-        }
+      const ordersYitong = getOrderData.orders.map((o: any) => o.bookingNo)
+      const ordersEb = JSON.stringify(ordersYitong)
+
+      const resInfoTruck = await getInformationTruckFromEb(ordersEb)
+      console.log("resInfoTruck", resInfoTruck);
+      if (resInfoTruck.status !== 1 || resInfoTruck.data.length === 0) return truckFilled;
+
+      for (let i = 0; i < resInfoTruck.data.length; i++) {
+        const truckInfo = resInfoTruck.data[i];
+        const idTruck = truckInfo?.trailerCom?.id || truckInfo?.trailerCompany;
 
         // Find truck code
-        const truckCode = truckData?.find((o: any) => o.id === data[0]?.order?.trailerCompany)
+        const truckCode = truckData?.find((o: any) => o.id === idTruck);
         if (truckCode && truckCode?.value) {
           // Fill truck for yitong order on website
           const resultFill = await fillTruckForYitongOrder(cookiesEPB, {
             truckCode: truckCode?.value,
-            bookingNo: order?.bookingNo,
+            bookingNo: truckInfo?.blNo?.includes('ONEY') ? truckInfo?.blNo?.slice(4) : truckInfo?.blNo,
           });
-          console.log("Fill truck for yitong order main task", resultFill);
+          console.log("resultFillWhenAutoTruck", resultFill);
           if (resultFill?.success === "Y") {
-            truckFilled.push(order?.bookingNo);
-            const res = await updateOrderData({ blNo: order?.bookingNo });
+            truckFilled.push(truckInfo?.blNo);
+            const res = await updateOrderData({ blNo: truckInfo?.blNo });
             await updateYitongOrderDataDb({
-              bookingNo: order?.bookingNo,
+              bookingNo: truckInfo?.blNo?.includes('ONEY') ? truckInfo?.blNo?.slice(4) : truckInfo?.blNo,
               statusTruck: 1,
               statusTruckEb: 1,
-            })
+            });
             // Send mail to admin
             await sendMail({
-              subject: `[${order?.bookingNo}]-填写进亿通系统`,
+              subject: `[${truckInfo?.blNo}]-填写进亿通系统`,
               text: "填写进亿通系统-成功.",
               to: "904288354@qq.com",
             });
             // Send message to QQ
-            console.log("Result update yitong order main task", res)
-            const message = `${order?.bookingNo}---指定放箱成功`
+            console.log("Result update yitong order main task", res);
+            const message = `${truckInfo?.blNo}---指定放箱成功`;
             await sendMessageToQQ({
               sobids: res?.data?.sBind?.sobids || [],
               message,
@@ -298,34 +295,34 @@ export default function App() {
     let truckFilled: string[] = []
     const getOrderData = await getYitongOrderDataDb('2')
     setTruckLoading({ count: 0, total: getOrderData?.orders?.length || 0, successOrders: [] })
-    for (let i = 0; i < getOrderData?.orders?.length; i++) {
-      const order = getOrderData?.orders[i]
-      if (!order.bookingNo) {
-        setTruckLoading((prev) => ({ ...prev, count: prev.count + 1 }))
-        continue
-      }
-      // Fetch order data
-      const { data } = await fetchOrderData({ page: 1, pageSize: 10, blNo: order.bookingNo })
-      if (data.length === 0 || !data[0]?.order?.trailerCompany) {
-        setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [] }))
-        await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 0, statusTruckEb: 2 }) // 2: No truck found
-        continue
-      }
+    const ordersYitong: string[] = getOrderData.orders.map((o: any) => o.bookingNo)
+    const ordersEb = JSON.stringify(ordersYitong)
+    const resInfoTruck = await getInformationTruckFromEb(ordersEb)
+    console.log("resInfoTruck", resInfoTruck);
+    if (resInfoTruck.status !== 1 || resInfoTruck.data.length === 0) return truckFilled;
+
+    for (let i = 0; i < resInfoTruck.data.length; i++) {
+      const truckInfo = resInfoTruck.data[i];
+      const idTruck = truckInfo?.trailerCom?.id || truckInfo?.trailerCompany;
 
       // Find truck code
-      const truckCode = truckData?.find((o: any) => o.id === data[0]?.order?.trailerCompany)
+      const truckCode = truckData?.find((o: any) => o.id === idTruck);
       if (truckCode && truckCode?.value) {
         // Fill truck for yitong order on website
-        const resultFill = await fillTruckForYitongOrder(cookiesEPB, { truckCode: truckCode?.value, bookingNo: order?.bookingNo })
-        console.log("resultFill", resultFill)
+        const resultFill = await fillTruckForYitongOrder(cookiesEPB, {
+          truckCode: truckCode?.value,
+          bookingNo: truckInfo?.blNo?.includes("ONEY")
+            ? truckInfo?.blNo?.slice(4)
+            : truckInfo?.blNo,
+        });
+        console.log("resultFillWhenActionTruck", resultFill)
         if (resultFill?.success === 'Y') {
-          truckFilled.push(order?.bookingNo)
-          const res = await updateOrderData({ blNo: order?.bookingNo?.includes('ONEY') ? order?.bookingNo : 'ONEY' + order?.bookingNo })
-          await updateYitongOrderDataDb({ bookingNo: order?.bookingNo, statusTruck: 1, statusTruckEb: 1 }) // 1: Truck filled
-          const message = `${order?.bookingNo}---指定放箱成功`
-          const resultSendMessage = await sendMessageToQQ({ sobids: res?.data?.map((o: any) => o.id.toString()) || [], message })
-          console.log("resultSendMessage", resultSendMessage)
-          setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [...prev.successOrders, order?.bookingNo] }))
+          truckFilled.push(truckInfo?.blNo)
+          const res = await updateOrderData({ blNo: truckInfo?.blNo })
+          await updateYitongOrderDataDb({ bookingNo: truckInfo?.blNo?.includes('ONEY') ? truckInfo?.blNo?.slice(4) : truckInfo?.blNo, statusTruck: 1, statusTruckEb: 1 }) // 1: Truck filled
+          const message = `${truckInfo?.blNo}---指定放箱成功`
+          await sendMessageToQQ({ sobids: res?.data?.map((o: any) => o.id.toString()) || [], message })
+          setTruckLoading((prev) => ({ ...prev, count: prev.count + 1, successOrders: [...prev.successOrders, truckInfo?.blNo] }))
         } else {
           setTruckLoading((prev) => ({ ...prev, count: prev.count + 1 }))
         }
