@@ -14,7 +14,7 @@ const fetchTruckData = async () => {
 
 // Get information truck from eb system
 const getInformationTruckFromEb = async (orders: string[] | string) => {
-  const url = 'http://localhost:3001/vn/yitong/truckCompanyInfos'
+  const url = 'https://www.dadaex.cn/api/vn/yitong/truckCompanyInfos'
   try {
     const res = await axios.post(url, { blNos: orders })
     return res.data
