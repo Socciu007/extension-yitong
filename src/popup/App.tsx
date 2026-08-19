@@ -296,11 +296,11 @@ export default function App() {
     const getOrderData = await getYitongOrderDataDb('2')
     setTruckLoading({ count: 0, total: getOrderData?.orders?.length || 0, successOrders: [] })
     const ordersYitong: string[] = getOrderData.orders.map((o: any) => o.bookingNo)
-    console.log("ordersYitongAutoTruck", ordersYitong);
+    console.log("ordersYitongActionTruck", ordersYitong);
     const ordersEb = JSON.stringify(ordersYitong)
-    console.log("ordersEbAutoTruck", ordersEb);
+    console.log("ordersEbActionTruck", ordersEb);
     const resInfoTruck = await getInformationTruckFromEb(ordersEb)
-    console.log("resInfoTruckAutoTruck", resInfoTruck);
+    console.log("resInfoTruckActionTruck", resInfoTruck);
     if (resInfoTruck.status !== 1 || resInfoTruck.data.length === 0) return truckFilled;
 
     for (let i = 0; i < resInfoTruck.data.length; i++) {
