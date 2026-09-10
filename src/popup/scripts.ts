@@ -63,6 +63,7 @@ export const decodeCapcha = async (base64img: string) => {
     formData.append('codetype', '4004')
     formData.append('file_base64', base64img)
     const response = await axios.post('https://upload.chaojiying.net/Upload/Processing.php', formData)
+    console.log("response", response)
     return response.data.pic_str
   } catch (error) {
     console.error('Error in getCaptchacode:', error)
@@ -122,6 +123,7 @@ export const getCookiesEPB = async () => {
       const capchaCode = await decodeCapcha(
         Buffer.from(toBase64.data, "binary").toString("base64")
       )
+      console.log("capchaCode", capchaCode)
       if (!capchaCode) {
         showToast("Please login to the system!", "warning")
         return
