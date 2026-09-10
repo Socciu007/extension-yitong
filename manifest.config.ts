@@ -27,10 +27,19 @@ export default defineManifest({
     'alarms',
   ],
   host_permissions: ['*://*.eptrade.cn/*', '*://*.dadaex.cn/*'],
-  content_scripts: [{
-    js: ['src/content/features/index.ts'],
-    matches: ['https://www.eptrade.cn/*'],
-  }],
+  content_scripts: [
+    {
+      js: ['src/content/features/noDialog.ts'],
+      matches: ['https://www.eptrade.cn/*'],
+      run_at: 'document_start',
+      world: 'MAIN',
+    },
+    {
+      js: ['src/content/features/index.ts'],
+      matches: ['https://www.eptrade.cn/*'],
+      run_at: 'document_start',
+    },
+  ],
   side_panel: {
     default_path: 'src/sidepanel/index.html',
   },

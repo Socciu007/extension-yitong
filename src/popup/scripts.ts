@@ -135,9 +135,11 @@ export const getCookiesEPB = async () => {
           try {
             const capchaCodeInput = document.querySelector("#login2 > table > tbody > tr:nth-child(3) > td:nth-child(1) > input") as HTMLInputElement
             if (capchaCodeInput) capchaCodeInput.value = capchaCode
+            const agreeAcct = await document.querySelector("#agreeAcct") as HTMLInputElement
+            if (agreeAcct) await agreeAcct.click()
 
-            const loginBtn = document.querySelector("#btnLogin") as HTMLButtonElement
-            if (loginBtn) loginBtn.click()
+            const loginBtn = await document.querySelector("#btnLogin") as HTMLButtonElement
+            if (loginBtn) await loginBtn.click()
             return true
           } catch (error) {
             console.error("Error login in the page", error)
@@ -146,7 +148,7 @@ export const getCookiesEPB = async () => {
         },
         args: [capchaCode],
       })
-      console.log("resultLogin", resultLogin)
+      // console.log("resultLogin", resultLogin)
       if (!resultLogin[0].result) {
         showToast("Please start again or login to the system!", "warning")
         return

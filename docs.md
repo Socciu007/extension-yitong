@@ -1,4 +1,11 @@
-## 提示词总览 (03-07-2026)
+# 本次会话提示词时间线 (19-08-2026)
+
+> 记录本次会话中用户发出的所有提示词（按时间顺序），并标注每次执行的关键操作。
+> 时间字段为会话内的相对顺序估算（HH:MM 格式），用于回顾节奏。
+
+---
+
+## 提示词总览
 
 | #  | 时间(约) | 提示词(中文)                                                                                                  | 关键操作摘要                                          |
 | -- | -------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -10,8 +17,16 @@
 | 6  | 14:25    | `add .` 然后 commit                                                                                              | commit `42b8984`                                     |
 | 7  | 14:30    | `git add .` 然后 commit                                                                                          | commit `41fcfa9` (bump 1.1.1 + 切换生产端点)          |
 | 8  | 14:35    | 用中文按时间线统计本次会话所有 prompt 到 `docs.md`                                                              | 生成 `docs.md`                                       |
-| 9  | 14:40    | 新增一个包含时间和 prompt 的表格                                                                                  | 重排为表格形式 (本文件当前版本)                        |
-| 10 | 14:45    | 将 prompt 翻译成英文或中文                                                                                        | 把表格里的 prompt 翻译为中文（本版本）                 |
+| 9  | 14:40    | 新增一个包含时间和 prompt 的表格                                                                                  | 重排为表格形式                                        |
+| 10 | 14:45    | 将 prompt 翻译成英文或中文                                                                                        | 把表格里的 prompt 翻译为中文                          |
+| 11 | 14:50    | `add và` 然后 commit（包含新生成的 docs.md）                                                                      | commit `edd4994` (新增 docs.md + fetch 过滤调整)      |
+| 12 | 14:55    | 把 `ordersYitong` 改为明确的 string 数组类型（不是对象）                                                          | `const ordersYitong: string[] = ...`                  |
+| 13 | 15:00    | commit 代码                                                                                                      | commit `9597f69` (重构为 `getInformationTruckFromEb`) |
+| 14 | 15:05    | 再 commit 一次代码                                                                                                | commit `5458c34` (新增 handleTruck debug logs)        |
+| 15 | 15:10    | `git push`                                                                                                        | push `ba127fa..5458c34` 到 `origin/master`            |
+| 16 | 15:15    | commit 并 push                                                                                                    | commit `cc4a631` (日志重命名 AutoTruck→ActionTruck) + push |
+| 17 | 15:20    | 运行 `npm run build`                                                                                              | 构建成功，输出到 `dist/`                              |
+| 18 | 15:25    | 把 19/08/2026 当天的所有 prompt 统计到 `docs.md`                                                                 | 本文件当前版本                                        |
 
 ---
 
@@ -105,3 +120,80 @@
 - 表格列名 `提示词(原文)` 改为 `提示词(中文)`
 - 表格中所有越南语 prompt 翻译为中文，与文档其他部分保持一致
 - 详细说明区块的「原文」字段同时保留越南语原文 + 中文译文，方便对照
+
+---
+
+### 11. 第三次提交（包含 docs.md）
+**原文**：`add và commit`
+
+**操作**：
+- 提交 commit `edd4994`：`tighten fetch filter and document session prompts`
+- 包含 `background.js`、`docs.md`（新增）、`src/popup/App.tsx`
+- `background.js` 增加 `filter(item => item.trailerCompany)` 过滤；`App.tsx` 调整 bookingNo 取值（slice 4 处理 `ONEY` 前缀）
+
+---
+
+### 12. 显式声明 string[] 类型
+**原文**：`const ordersYitong = getOrderData.orders.map((o: any) => o.bookingNo) chuyển thành mảng các string chứ không phải object`
+
+**操作**：
+- 修改 `src/popup/App.tsx:307` 为 `const ordersYitong: string[] = getOrderData.orders.map((o: any) => o.bookingNo)`
+- 消除 TS `any[]` 推断，明确语义
+
+---
+
+### 13. 第四次提交（重构批量获取 truck 信息）
+**原文**：`commit code`
+
+**操作**：
+- 提交 commit `9597f69`：`batch-fetch truck info via getInformationTruckFromEb`
+- 替换 `fetchOrderData` 为 `getInformationTruckFromEb`（POST `localhost:3001/.../truckCompanyInfos`）
+- `mainTask` 与 `handleTruck` 改为批量取一次、循环遍历
+- 顺手修复遗留的 `order?.bookingNo` 引用
+
+---
+
+### 14. 第五次提交（新增 handleTruck 日志）
+**原文**：`commit code lần nữa`
+
+**操作**：
+- 提交 commit `5458c34`：`add debug logs in handleTruck flow`
+- 在 `src/popup/App.tsx:299-302` 新增 `ordersYitongAutoTruck`、`ordersEbAutoTruck`、`resInfoTruckAutoTruck` 三个 console.log
+
+---
+
+### 15. 第一次 push
+**原文**：`git push`
+
+**操作**：
+- `git push origin master` → `ba127fa..5458c34 master -> master`
+- 远程提示仓库已迁移至 `https://github.com/Socciu007/extension-yitong.git`
+
+---
+
+### 16. 第六次提交 + push（日志重命名）
+**原文**：`commit and push`
+
+**操作**：
+- 提交 commit `cc4a631`：`rename handleTruck debug logs from AutoTruck to ActionTruck`
+- 将日志标签从 `AutoTruck` 前缀改为 `ActionTruck`（匹配函数名 `handleTruck`）
+- 推送到 `origin/master`：`5458c34..cc4a631`
+
+---
+
+### 17. 构建生产包
+**原文**：`npm run build`
+
+**操作**：
+- `tsc -b && vite build` 通过
+- 输出 `dist/`：popup 78.88 kB、sidepanel 142.45 kB、background 1.01 kB、manifest 0.99 kB
+- 自动 zip 打包完成；102 modules transformed trong 1.41s
+
+---
+
+### 18. 统计 19/08/2026 当天所有 prompt 到 docs.md
+**原文**：`thống kê prompt ngày 19/08/2026 vào docs.md`
+
+**操作**：
+- 重写 `docs.md` 头部日期 `03-07-2026` → `19-08-2026`
+- 详细描述 #1–#18
