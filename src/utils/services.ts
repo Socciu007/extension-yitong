@@ -61,6 +61,20 @@ const sendMessageToQQ = async ({ sobids, message }: { sobids: string[], message:
   }
 }
 
+// Send notice private to QQ by API eb
+const sendNoticePrivateToQQ = async ({ cid, message }: { cid: string, message: string }) => {
+  const url = 'https://www.dadaex.cn/api/vn/sailingSchedules/sendQQMessage'
+  try {
+    const formData = new FormData()
+    formData.append('cid', cid)
+    formData.append('message', message)
+    const res = await axios.post(url, formData)
+    return res.data
+  } catch (error) {
+    return error
+  }
+}
+
 // Yitong WEP API
 // Import order to yitong
 const importOrderToYitong = async (cookie: string | null, data: any) => {
@@ -189,5 +203,6 @@ export {
   getOrderInEb,
   importOrderToYitong,
   sendMail,
-  getInformationTruckFromEb
+  getInformationTruckFromEb,
+  sendNoticePrivateToQQ
 }
